@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Urdu typography */
+[dir="rtl"] {
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Urdu Typesetting', Tahoma, sans-serif;
+}
+
+[dir="rtl"] input, [dir="rtl"] select, [dir="rtl"] textarea {
+  text-align: right;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Thermal Printer & Receipt Print Styles */
+@media print {
+  body {
+    background: transparent !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .thermal-receipt {
+    width: 78mm !important;
+    max-width: 78mm !important;
+    margin: 0 auto !important;
+    padding: 2mm !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    color: #000 !important;
+  }
+
+  .thermal-receipt-58 {
+    width: 54mm !important;
+    max-width: 54mm !important;
+    margin: 0 auto !important;
+    padding: 1mm !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    color: #000 !important;
+  }
+
+  .a4-invoice {
+    width: 210mm !important;
+    margin: 0 auto !important;
+    padding: 10mm !important;
+    font-size: 13px !important;
+  }
+
+  /* Barcode sticker sheet print styles */
+  .barcode-labels-print-modal {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .barcode-labels-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 4mm !important;
+    padding: 5mm !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: 100% !important;
+  }
+
+  .barcode-sticker {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: 1px dashed #777 !important;
+    padding: 2.5mm !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  @page {
+    margin: 5mm;
+  }
+}
