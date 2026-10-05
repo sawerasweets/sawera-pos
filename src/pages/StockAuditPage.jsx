@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export function StockAuditPage() {
-  const { activeBranchId, branches } = useAuth();
+  const { activeBranchId, branches, lang } = useAuth();
   const [activeTab, setActiveTab] = useState('new'); // 'new', 'history'
   const [selectedBranch, setSelectedBranch] = useState(activeBranchId || 1);
   const [loading, setLoading] = useState(false);

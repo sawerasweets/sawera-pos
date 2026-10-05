@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export function ProductionPage() {
-  const { activeBranchId, branches, user } = useAuth();
+  const { activeBranchId, branches, user, lang } = useAuth();
   const [activeTab, setActiveTab] = useState('produce'); // 'produce', 'recipes', 'history'
   
   // Data states

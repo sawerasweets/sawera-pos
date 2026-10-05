@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export function WastePage() {
-  const { activeBranchId, branches } = useAuth();
+  const { activeBranchId, branches, lang } = useAuth();
   const [wasteLogs, setWasteLogs] = useState([]);
   const [products, setProducts] = useState([]);
   const [totalLoss, setTotalLoss] = useState(0);
