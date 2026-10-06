@@ -112,19 +112,25 @@ export function ProductsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setFormData(prev => ({ ...prev, barcode: data.barcode }));
+        setFormData(prev => ({ ...prev, barcode: String(data.barcode || '') }));
         setFormError('');
+      } else {
+        setFormData(prev => ({ ...prev, barcode: `8964${Date.now().toString().slice(-8)}` }));
       }
     } catch (err) {
       console.error('Failed to generate barcode', err);
+      setFormData(prev => ({ ...prev, barcode: `8964${Date.now().toString().slice(-8)}` }));
     }
   };
 
   const openCreateModal = (prefillBarcode = '') => {
     setEditId(null);
     setFormError('');
+    const barcodeStr = (typeof prefillBarcode === 'string' && prefillBarcode.trim() && !prefillBarcode.includes('[object')) 
+      ? prefillBarcode.trim() 
+      : '';
     const randCode = `PRD-${Date.now().toString().slice(-5)}`;
-    const randBarcode = prefillBarcode || `8964${Date.now().toString().slice(-8)}`;
+    const randBarcode = barcodeStr || `8964${Date.now().toString().slice(-8)}`;
     setFormData({
       name: '',
       name_urdu: '',
@@ -136,13 +142,13 @@ export function ProductsPage() {
       purchase_price: 0,
       sale_price: 0,
       wholesale_price: 0,
-      min_stock: 10,
-      unit: 'Kg',
+      min_stock: 5,
+      unit: 'Piece',
       supplier_id: suppliers[0]?.id || '',
       expiry_date: '',
       image_url: 'https://images.unsplash.com/photo-1599785209707-a456fc1337bb?w=200&auto=format&fit=crop&q=60',
       description: '',
-      initial_stock: 25
+      initial_stock: 0
     });
     setShowModal(true);
   };
@@ -181,13 +187,38 @@ export function ProductsPage() {
       const url = editId ? `/api/products/${editId}` : '/api/products';
       const method = editId ? 'PUT' : 'POST';
 
+      const rawBarcode = typeof formData.barcode === 'string' ? formData.barcode.trim() : '';
+      const cleanBarcode = (rawBarcode && !rawBarcode.includes('[object'))
+        ? rawBarcode
+        : `8964${Date.now().toString().slice(-8)}`;
+
+      const payload = {
+        name: String(formData.name || '').trim(),
+        name_urdu: String(formData.name_urdu || '').trim(),
+        code: String(formData.code || `PRD-${Date.now().toString().slice(-5)}`).trim(),
+        sku: String(formData.sku || formData.code || '').trim(),
+        barcode: cleanBarcode,
+        category_id: formData.category_id ? Number(formData.category_id) : null,
+        brand: String(formData.brand || 'Sawera Sweets').trim(),
+        purchase_price: parseFloat(formData.purchase_price) || 0,
+        sale_price: parseFloat(formData.sale_price) || 0,
+        wholesale_price: parseFloat(formData.wholesale_price) || 0,
+        min_stock: parseFloat(formData.min_stock) || 5,
+        unit: String(formData.unit || 'Piece').trim(),
+        supplier_id: formData.supplier_id ? Number(formData.supplier_id) : null,
+        expiry_date: formData.expiry_date || null,
+        image_url: String(formData.image_url || '').trim(),
+        description: String(formData.description || '').trim(),
+        initial_stock: parseFloat(formData.initial_stock) || 0
+      };
+
       const res = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       const json = await res.json();
@@ -240,7 +271,7 @@ export function ProductsPage() {
 
         {hasPermission('manage_products') && (
           <button
-            onClick={openCreateModal}
+            onClick={() => openCreateModal('')}
             className="flex items-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -458,7 +489,7 @@ export function ProductsPage() {
                   </div>
                   <input
                     type="text"
-                    value={formData.barcode}
+                    value={typeof formData.barcode === 'string' ? formData.barcode : ''}
                     onChange={(e) => {
                       setFormData({ ...formData, barcode: e.target.value });
                       setFormError('');
@@ -477,7 +508,7 @@ export function ProductsPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={handleGenerateBarcode}
+                      onClick={() => handleGenerateBarcode()}
                       className="flex-1 py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold rounded-lg flex items-center justify-center gap-1.5 text-[11px] border border-amber-200 transition cursor-pointer"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-amber-600" />
