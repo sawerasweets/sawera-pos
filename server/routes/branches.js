@@ -138,7 +138,7 @@ router.delete('/:id', authenticate, requireRole(['admin']), (req, res) => {
 
   if (salesCount > 0) {
     // Soft deactivate instead of breaking relational integrity
-    db.prepare('UPDATE branches SET status = "inactive", updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(branchId);
+    db.prepare("UPDATE branches SET status = 'inactive', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(branchId);
     return res.json({ message: 'Branch has past sales history, so it has been set to inactive.' });
   }
 

@@ -135,7 +135,7 @@ router.delete('/:id', authenticate, requireRole(['admin']), (req, res) => {
     return res.status(400).json({ error: 'Cannot deactivate your own account.' });
   }
 
-  db.prepare('UPDATE users SET status = "inactive", updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(targetId);
+  db.prepare("UPDATE users SET status = 'inactive', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(targetId);
   res.json({ message: 'User deactivated successfully' });
 });
 

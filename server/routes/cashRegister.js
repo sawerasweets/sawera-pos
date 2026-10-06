@@ -67,7 +67,7 @@ router.post('/open', authenticate, requirePermission('pos_access'), (req, res) =
   const branchId = Number(branch_id || req.user.branch_id || 1);
 
   // Check if already open
-  const existing = db.prepare('SELECT id FROM cash_registers WHERE branch_id = ? AND status = "open"').get(branchId);
+  const existing = db.prepare("SELECT id FROM cash_registers WHERE branch_id = ? AND status = 'open'").get(branchId);
   if (existing) {
     return res.status(400).json({ error: 'A cash register session is already open for this branch. Please close it first.' });
   }
@@ -97,7 +97,7 @@ router.post('/close', authenticate, requirePermission('pos_access'), (req, res) 
   const { branch_id, actual_cash, notes } = req.body;
   const branchId = Number(branch_id || req.user.branch_id || 1);
 
-  const register = db.prepare('SELECT * FROM cash_registers WHERE branch_id = ? AND status = "open"').get(branchId);
+  const register = db.prepare("SELECT * FROM cash_registers WHERE branch_id = ? AND status = 'open'").get(branchId);
   if (!register) {
     return res.status(400).json({ error: 'No open cash register session found to close.' });
   }

@@ -80,15 +80,15 @@
     overflow: visible !important;
   }
 
-  /* Black Copper BC-87AC (79.5mm / 80mm thermal receipt) */
+  /* Black Copper BC-87AC (79.5mm / 80mm thermal receipt) - Compact Half-Height Layout */
   .thermal-receipt {
-    width: 76mm !important;
-    max-width: 76mm !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
     margin: 0 !important;
-    padding: 2mm 3mm !important;
+    padding: 1mm 2mm !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-    font-size: 12px !important;
-    line-height: 1.3 !important;
+    font-size: 10px !important;
+    line-height: 1.18 !important;
     color: #000 !important;
     background: #fff !important;
     border: none !important;

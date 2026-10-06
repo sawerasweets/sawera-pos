@@ -9,20 +9,19 @@ router.get('/dashboard', authenticate, (req, res) => {
   const { branch_id, date_range = 'today' } = req.query;
   const branchId = branch_id && branch_id !== 'all' ? Number(branch_id) : null;
 
-  // Compute date filter
-  const today = new Date().toISOString().split('T')[0];
-  let dateCondition = `date(s.created_at) = date('${today}')`;
-  let expDateCondition = `date(e.date) = date('${today}')`;
-  let purDateCondition = `date(p.created_at) = date('${today}')`;
+  // Compute date filter (supporting Pakistan time UTC+5 and UTC)
+  let dateCondition = `(date(s.created_at, '+5 hours') = date('now', '+5 hours') OR date(s.created_at) = date('now'))`;
+  let expDateCondition = `(date(e.date) = date('now', '+5 hours') OR date(e.date) = date('now'))`;
+  let purDateCondition = `(date(p.created_at, '+5 hours') = date('now', '+5 hours') OR date(p.created_at) = date('now'))`;
 
   if (date_range === '7days') {
     dateCondition = `s.created_at >= datetime('now', '-7 days')`;
     expDateCondition = `e.date >= date('now', '-7 days')`;
     purDateCondition = `p.created_at >= datetime('now', '-7 days')`;
   } else if (date_range === 'month') {
-    dateCondition = `strftime('%Y-%m', s.created_at) = strftime('%Y-%m', 'now')`;
-    expDateCondition = `strftime('%Y-%m', e.date) = strftime('%Y-%m', 'now')`;
-    purDateCondition = `strftime('%Y-%m', p.created_at) = strftime('%Y-%m', 'now')`;
+    dateCondition = `(strftime('%Y-%m', s.created_at, '+5 hours') = strftime('%Y-%m', 'now', '+5 hours') OR strftime('%Y-%m', s.created_at) = strftime('%Y-%m', 'now'))`;
+    expDateCondition = `(strftime('%Y-%m', e.date) = strftime('%Y-%m', 'now', '+5 hours') OR strftime('%Y-%m', e.date) = strftime('%Y-%m', 'now'))`;
+    purDateCondition = `(strftime('%Y-%m', p.created_at, '+5 hours') = strftime('%Y-%m', 'now', '+5 hours') OR strftime('%Y-%m', p.created_at) = strftime('%Y-%m', 'now'))`;
   }
 
   // Branch conditions
@@ -60,7 +59,7 @@ router.get('/dashboard', authenticate, (req, res) => {
   `).get().cash_in_hand;
 
   // Counts
-  const totalProducts = db.prepare('SELECT COUNT(*) as count FROM products WHERE status = "active"').get().count;
+  const totalProducts = db.prepare("SELECT COUNT(*) as count FROM products WHERE status = 'active'").get().count;
 
   const lowStockCount = db.prepare(`
     SELECT COUNT(*) as count FROM products p
@@ -78,10 +77,10 @@ router.get('/dashboard', authenticate, (req, res) => {
       AND bi.quantity <= 0
   `).get().count;
 
-  const totalCustomers = db.prepare('SELECT COUNT(*) as count FROM customers WHERE status = "active"').get().count;
-  const totalSuppliers = db.prepare('SELECT COUNT(*) as count FROM suppliers WHERE status = "active"').get().count;
-  const totalCustomerCredit = db.prepare('SELECT COALESCE(SUM(current_balance), 0) as credit FROM customers WHERE status = "active"').get().credit;
-  const totalSupplierPayable = db.prepare('SELECT COALESCE(SUM(current_balance), 0) as payable FROM suppliers WHERE status = "active"').get().payable;
+  const totalCustomers = db.prepare("SELECT COUNT(*) as count FROM customers WHERE status = 'active'").get().count;
+  const totalSuppliers = db.prepare("SELECT COUNT(*) as count FROM suppliers WHERE status = 'active'").get().count;
+  const totalCustomerCredit = db.prepare("SELECT COALESCE(SUM(current_balance), 0) as credit FROM customers WHERE status = 'active'").get().credit;
+  const totalSupplierPayable = db.prepare("SELECT COALESCE(SUM(current_balance), 0) as payable FROM suppliers WHERE status = 'active'").get().payable;
 
   // Multi-branch comparison
   const branchComparison = db.prepare(`
