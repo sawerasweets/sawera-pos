@@ -148,7 +148,7 @@ router.post('/clean-demo-data', authenticate, requireRole(['admin']), (req, res)
   try {
     db.exec('BEGIN TRANSACTION;');
 
-    // Remove transactional demo records
+    db.exec('PRAGMA foreign_keys = OFF;');
     db.exec('DELETE FROM sales_returns;');
     db.exec('DELETE FROM sales_return_items;');
     db.exec('DELETE FROM sale_items;');
@@ -160,28 +160,37 @@ router.post('/clean-demo-data', authenticate, requireRole(['admin']), (req, res)
     db.exec('DELETE FROM supplier_payments;');
     db.exec('DELETE FROM expenses;');
     db.exec('DELETE FROM cash_registers;');
+    db.exec('DELETE FROM shifts;');
     db.exec('DELETE FROM stock_movements;');
     db.exec('DELETE FROM branch_transfers;');
     db.exec('DELETE FROM branch_transfer_items;');
     db.exec('DELETE FROM stock_audits;');
     db.exec('DELETE FROM stock_audit_items;');
     db.exec('DELETE FROM waste_logs;');
-    db.exec('DELETE FROM production_batches;');
+    db.exec('DELETE FROM production_items;');
+    db.exec('DELETE FROM productions;');
     db.exec('DELETE FROM quotations;');
     db.exec('DELETE FROM quotation_items;');
     db.exec('DELETE FROM parked_bills;');
     db.exec('DELETE FROM loyalty_logs;');
+    db.exec('DELETE FROM price_change_requests;');
 
     // Reset customer udhaar & balances
-    db.exec('UPDATE customers SET current_balance = 0, loyalty_points = 0;');
+    db.exec('DELETE FROM customers;');
+    db.exec(`
+      INSERT INTO customers (id, name, phone, email, address, opening_balance, current_balance, credit_limit, status)
+      VALUES (1, 'Walk-in Customer (عام گاہک)', '0300-0000000', '', 'Counter Sale', 0, 0, 50000, 'active');
+    `);
 
     // Reset supplier balances
-    db.exec('UPDATE suppliers SET current_balance = 0;');
+    db.exec('UPDATE suppliers SET opening_balance = 0, current_balance = 0;');
 
-    // Reset inventory stock to 0
-    db.exec('UPDATE branch_inventory SET quantity = 0;');
+    // Reset inventory stock to exactly 0
+    db.exec('UPDATE branch_inventory SET quantity = 0, last_restocked = NULL;');
 
+    db.exec('PRAGMA foreign_keys = ON;');
     db.exec('COMMIT;');
+    db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
 
     logAudit({
       userId: req.user.id,
