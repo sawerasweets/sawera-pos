@@ -614,7 +614,7 @@ export function seedInitialData(force = false) {
     { key: 'printer_type', value: 'thermal_80' }, // thermal_80, thermal_58, a4
     { key: 'low_stock_threshold', value: '10' },
     { key: 'auto_print_receipt', value: 'true' },
-    { key: 'allow_negative_stock', value: 'false' },
+    { key: 'allow_negative_stock', value: 'true' },
     { key: 'last_backup_date', value: '' }
   ];
 
