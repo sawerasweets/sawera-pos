@@ -152,6 +152,9 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
               
               {/* Receipt Header */}
               <div className="text-center pb-2 border-b border-dashed border-slate-400">
+                <div className="w-14 h-14 rounded-full overflow-hidden mx-auto mb-1.5 border border-slate-300 bg-white">
+                  <img src="/logo.png" alt="Sawera Sweets & Bakers" className="w-full h-full object-cover" />
+                </div>
                 {isUrdu ? (
                   <h2 className="text-xl font-black text-slate-900">
                     سویرا سویٹس اینڈ بیکرز
@@ -350,17 +353,21 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
                 isUrdu ? 'font-urdu' : 'font-sans'
               }`}
             >
-              <div className="flex justify-between items-start border-b-2 border-amber-600 pb-4">
-                <div>
-                  {isUrdu ? (
-                    <h1 className="text-2xl font-black text-amber-600">
-                      سویرا سویٹس اینڈ بیکرز
-                    </h1>
-                  ) : (
-                    <h1 className="text-2xl font-black text-amber-600 tracking-tight">
-                      SAWERA SWEET &amp; BAKERS
-                    </h1>
-                  )}
+              <div className="flex justify-between items-start border-b-2 border-emerald-600 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border border-emerald-600/40 shrink-0 bg-white shadow-xs">
+                    <img src="/logo.png" alt="Sawera Sweets & Bakers" className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    {isUrdu ? (
+                      <h1 className="text-2xl font-black text-emerald-800">
+                        سویرا سویٹس اینڈ بیکرز
+                      </h1>
+                    ) : (
+                      <h1 className="text-2xl font-black text-emerald-800 tracking-tight">
+                        SAWERA SWEET &amp; BAKERS
+                      </h1>
+                    )}
                   <p className="text-xs font-semibold text-slate-600 mt-1">
                     {sale.branch_name} | {sale.branch_address}
                   </p>
@@ -368,7 +375,8 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
                     {isUrdu ? 'فون: ' : 'Phone: '}{sale.branch_phone || '051-5551234'} | NTN: 8765432-1
                   </p>
                 </div>
-                <div className="text-right rtl:text-left">
+              </div>
+              <div className="text-right rtl:text-left">
                   <div className="bg-amber-100 text-amber-900 font-bold px-3 py-1 rounded-md text-xs uppercase tracking-wider inline-block">
                     {isUrdu ? 'سیلز ٹیکس انوائس' : 'Retail Tax Invoice'}
                   </div>

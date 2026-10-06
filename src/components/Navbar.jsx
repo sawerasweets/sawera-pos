@@ -57,8 +57,8 @@ export function Navbar({ onNavigate }) {
         
         {/* Left: Brand Identity & Active Branch */}
         <div className="flex items-center space-x-3 rtl:space-x-reverse">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 via-rose-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-600/20 font-bold text-xl">
-            🍬
+          <div className="w-11 h-11 rounded-full overflow-hidden shadow-md border-2 border-emerald-600/40 shrink-0 bg-white">
+            <img src="/logo.png" alt="Sawera Sweets & Bakers" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="flex items-center space-x-2 rtl:space-x-reverse">

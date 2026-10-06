@@ -77,8 +77,8 @@ export function LoginPage() {
         
         {/* Top Visual Banner */}
         <div className="bg-gradient-to-tr from-amber-600 via-rose-600 to-amber-500 p-8 text-white text-center relative overflow-hidden">
-          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl mx-auto shadow-inner mb-3">
-            🍬
+          <div className="w-20 h-20 rounded-full mx-auto shadow-xl mb-3 overflow-hidden border-2 border-amber-300 bg-white">
+            <img src="/logo.png" alt="Sawera Sweet & Bakers" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-2xl font-black tracking-tight">
             {lang === 'ur' ? 'سویرا سویٹس اینڈ بیکرز' : 'Sawera Sweet & Bakers'}

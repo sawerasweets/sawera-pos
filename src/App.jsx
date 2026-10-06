@@ -30,7 +30,9 @@ function MainApp() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
         <div className="text-center space-y-3">
-          <div className="text-4xl animate-bounce">🍬</div>
+          <div className="w-16 h-16 rounded-full overflow-hidden mx-auto shadow-2xl border-2 border-emerald-500 animate-pulse bg-white">
+            <img src="/logo.png" alt="Sawera Sweets & Bakers" className="w-full h-full object-cover" />
+          </div>
           <p className="font-bold text-sm tracking-wide text-amber-400">Loading Sawera Sweet &amp; Bakers POS...</p>
         </div>
       </div>
