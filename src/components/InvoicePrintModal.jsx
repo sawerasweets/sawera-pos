@@ -45,7 +45,7 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
 
     if (autoPrint) {
       setTimeout(() => {
-        window.print();
+        handlePrint();
       }, 400);
     }
   }, [sale, template, receiptLang, autoPrint]);
@@ -53,7 +53,83 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
   if (!sale) return null;
 
   const handlePrint = () => {
-    window.print();
+    const printableElement = document.getElementById('printable-receipt-area');
+    if (!printableElement) {
+      window.print();
+      return;
+    }
+
+    let iframe = document.getElementById('thermal-print-iframe');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'thermal-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+    }
+
+    const doc = iframe.contentWindow || iframe.contentDocument;
+    const iframeDoc = doc.document || doc;
+    const receiptHtml = printableElement.innerHTML;
+
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html dir="${isUrdu ? 'rtl' : 'ltr'}">
+        <head>
+          <meta charset="utf-8">
+          <title>Sawera Receipt #${sale.invoice_no}</title>
+          <style>
+            @page {
+              size: ${template === 'thermal' ? '80mm auto' : 'A4'};
+              margin: 0mm;
+            }
+            body {
+              margin: 0;
+              padding: ${template === 'thermal' ? '2mm 3mm' : '10mm'};
+              color: #000;
+              background: #fff;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              width: ${template === 'thermal' ? '76mm' : '100%'};
+              box-sizing: border-box;
+            }
+            * { box-sizing: border-box; }
+            img { max-width: 100%; height: auto; }
+            svg { max-width: 100%; }
+            .thermal-receipt {
+              width: 76mm !important;
+              max-width: 76mm !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              border: none !important;
+              box-shadow: none !important;
+              color: #000 !important;
+            }
+            .a4-invoice {
+              width: 100% !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              border: none !important;
+              box-shadow: none !important;
+            }
+            ${Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map(s => s.outerHTML).join('\n')}
+          </style>
+        </head>
+        <body>
+          ${receiptHtml}
+        </body>
+      </html>
+    `);
+    iframeDoc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    }, 250);
   };
 
   const splitDetails = sale.split_details
@@ -63,8 +139,8 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
   const isUrdu = receiptLang === 'ur';
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[95vh]">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto invoice-modal-overlay">
+      <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[95vh] invoice-modal-box">
         
         {/* Modal Header (Hidden during print) */}
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between no-print">
@@ -139,7 +215,7 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
         </div>
 
         {/* Printable Area */}
-        <div className="p-4 overflow-y-auto flex-1 bg-slate-100 flex justify-center">
+        <div id="printable-receipt-area" className="p-4 overflow-y-auto flex-1 bg-slate-100 flex justify-center invoice-printable-wrapper">
           
           {/* THERMAL 80MM TEMPLATE */}
           {template === 'thermal' && (

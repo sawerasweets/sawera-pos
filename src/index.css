@@ -33,48 +33,79 @@
 
 /* Thermal Printer & Receipt Print Styles */
 @media print {
-  body {
-    background: transparent !important;
+  html, body {
+    background: #fff !important;
     color: #000 !important;
     padding: 0 !important;
     margin: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
   }
 
-  .no-print {
+  .no-print, header, nav, aside {
     display: none !important;
+    visibility: hidden !important;
   }
 
-  .print-only {
+  /* Reset modal positioning in print mode so it renders on paper */
+  .invoice-modal-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .invoice-modal-box {
+    position: static !important;
+    box-shadow: none !important;
+    border: none !important;
+    max-height: none !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: transparent !important;
     display: block !important;
   }
 
-  .thermal-receipt {
-    width: 78mm !important;
-    max-width: 78mm !important;
-    margin: 0 auto !important;
-    padding: 2mm !important;
-    font-family: 'Courier New', Courier, monospace !important;
-    font-size: 11px !important;
-    line-height: 1.25 !important;
-    color: #000 !important;
+  .invoice-printable-wrapper {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    display: block !important;
+    overflow: visible !important;
   }
 
-  .thermal-receipt-58 {
-    width: 54mm !important;
-    max-width: 54mm !important;
-    margin: 0 auto !important;
-    padding: 1mm !important;
-    font-family: 'Courier New', Courier, monospace !important;
-    font-size: 10px !important;
-    line-height: 1.2 !important;
+  /* Black Copper BC-87AC (79.5mm / 80mm thermal receipt) */
+  .thermal-receipt {
+    width: 76mm !important;
+    max-width: 76mm !important;
+    margin: 0 !important;
+    padding: 2mm 3mm !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
     color: #000 !important;
+    background: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: block !important;
   }
 
   .a4-invoice {
-    width: 210mm !important;
+    width: 100% !important;
+    max-width: 190mm !important;
     margin: 0 auto !important;
-    padding: 10mm !important;
+    padding: 5mm !important;
     font-size: 13px !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    display: block !important;
   }
 
   /* Barcode sticker sheet print styles */
