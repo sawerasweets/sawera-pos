@@ -271,7 +271,7 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
               style={{ fontFamily: 'Arial, "Helvetica Neue", Helvetica, sans-serif' }}
             >
               
-              {/* Receipt Header: Circular Logo, Name, Address, Phone, NTN, POS No */}
+              {/* Receipt Header: Circular Logo, Name, Address, Phone, POS No */}
               <div className="text-center pb-2">
                 <img
                   src="/logo.png"
@@ -281,28 +281,22 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
                 <h2 className="text-sm font-black tracking-wide text-black uppercase">
                   {isUrdu ? 'سویرا سویٹس اینڈ بیکرز' : 'Sawera Sweets & Bakers'}
                 </h2>
-                <p className="text-[10px] text-black mt-0.5">
-                  {sale.branch_address || (isUrdu ? 'صدر بازار، راولپنڈی' : 'Saddar Bazar, Rawalpindi')}
-                </p>
-                <p className="text-[10px] text-black">
-                  Ph: {sale.branch_phone || '051-5551234'} Cell: 0300-1112233
-                </p>
-                <p className="text-[10px] text-black">
-                  NTN: 8765432-1
+                <p className="text-[10px] text-black mt-0.5 font-medium">
+                  {sale.branch_address && !sale.branch_address.includes('Rawalpindi') ? sale.branch_address : (isUrdu ? 'گوجرہ روڈ بالمقابل ڈی ایچ کیو ہسپتال' : 'Gojra Road opp DHQ Hospital')}
                 </p>
                 <p className="text-[10px] text-black font-semibold">
+                  Cell: 0322-7434080
+                </p>
+                <p className="text-[10px] text-black">
                   POS No: {sale.branch_id || 1}
                 </p>
               </div>
 
-              {/* Order Meta Header: Cashier, Mop, Receipt No, Date */}
+              {/* Order Meta Header: Receipt No, Date, Mop */}
               <div className="text-[10.5px] text-black pt-1 mb-1 space-y-0.5">
-                <div className="flex justify-between">
-                  <span>Cashier: {sale.cashier_name || 'Admin'}</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-[11px]">Receipt No: {sale.invoice_no}</span>
                   <span>Mop : {sale.payment_method ? sale.payment_method.toUpperCase() : 'CASH'} Sales</span>
-                </div>
-                <div className="font-bold text-[11px]">
-                  Receipt No: {sale.invoice_no}
                 </div>
                 <div>
                   Date: {new Date(sale.created_at || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')} {new Date(sale.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -424,16 +418,16 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
                       </h1>
                     )}
                   <p className="text-xs font-semibold text-slate-600 mt-1">
-                    {sale.branch_name} | {sale.branch_address}
+                    {sale.branch_address && !sale.branch_address.includes('Rawalpindi') ? sale.branch_address : 'Gojra Road opp DHQ Hospital'}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {isUrdu ? 'فون: ' : 'Phone: '}{sale.branch_phone || '051-5551234'} | NTN: 8765432-1
+                    {isUrdu ? 'فون: ' : 'Phone: '}0322-7434080
                   </p>
                 </div>
               </div>
               <div className="text-right rtl:text-left">
                   <div className="bg-amber-100 text-amber-900 font-bold px-3 py-1 rounded-md text-xs uppercase tracking-wider inline-block">
-                    {isUrdu ? 'سیلز ٹیکس انوائس' : 'Retail Tax Invoice'}
+                    {isUrdu ? 'سیلز انوائس' : 'Sales Invoice'}
                   </div>
                   <p className="text-sm font-extrabold text-slate-800 mt-2 font-mono">
                     {sale.invoice_no}
@@ -444,7 +438,7 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
                 </div>
               </div>
 
-              {/* Customer / Cashier Info */}
+              {/* Customer / Transaction Info */}
               <div className="grid grid-cols-2 gap-4 py-4 text-xs border-b border-slate-200">
                 <div>
                   <p className="text-slate-500 font-semibold uppercase text-[10px]">
@@ -457,7 +451,6 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
                   <p className="text-slate-500 font-semibold uppercase text-[10px]">
                     {isUrdu ? 'معاملہ کی تفصیل:' : 'Transaction Info:'}
                   </p>
-                  <p className="font-semibold text-slate-700">{isUrdu ? 'کیشیئر: ' : 'Cashier: '}{sale.cashier_name || 'Staff'}</p>
                   <p className="font-semibold text-slate-700 uppercase">{isUrdu ? 'ادائیگی: ' : 'Payment: '}{sale.payment_method}</p>
                 </div>
               </div>

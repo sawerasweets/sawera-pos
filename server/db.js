@@ -598,16 +598,16 @@ export function seedInitialData(force = false) {
 
   // 1. Settings
   const defaultSettings = [
-    { key: 'business_name', value: 'Sawera Sweet & Bakers' },
+    { key: 'business_name', value: 'Sawera Sweets & Bakers' },
     { key: 'business_name_urdu', value: 'سویرا سویٹس اینڈ بیکرز' },
-    { key: 'phone', value: '+92 300 1234567' },
+    { key: 'phone', value: '0322-7434080' },
     { key: 'email', value: 'info@sawerasweets.com' },
-    { key: 'address', value: 'Main Saddar Bazar, Near GPO, Rawalpindi / Lahore' },
-    { key: 'ntn', value: '8765432-1' },
-    { key: 'strn', value: '32-77-8765-432-19' },
+    { key: 'address', value: 'Gojra Road opp DHQ Hospital' },
+    { key: 'ntn', value: '' },
+    { key: 'strn', value: '' },
     { key: 'currency', value: 'Rs.' },
     { key: 'tax_rate', value: '0' }, // 0% by default, configurable
-    { key: 'receipt_header', value: 'Sawera Sweet & Bakers - Quality Sweets & Fresh Bakery' },
+    { key: 'receipt_header', value: 'Sawera Sweets & Bakers - Quality Sweets & Fresh Bakery' },
     { key: 'receipt_header_urdu', value: 'خالص دیسی گھی کی بنی مٹھائیاں اور تازہ بیکری' },
     { key: 'receipt_footer', value: 'Thank you for shopping with us! Please come again.' },
     { key: 'receipt_footer_urdu', value: 'آپ کی تشریف آوری کا بہت شکریہ! دوبارہ تشریف لائیں۔' },
@@ -627,11 +627,11 @@ export function seedInitialData(force = false) {
   const branches = [
     {
       code: 'BR-01',
-      name: 'Main Saddar Branch',
-      name_urdu: 'مین صدر برانچ',
-      address: 'Shop 1-4, Saddar Commercial Area, Rawalpindi',
-      phone: '051-5551234',
-      manager_name: 'Muhammad Tariq',
+      name: 'Main Branch',
+      name_urdu: 'مین برانچ',
+      address: 'Gojra Road opp DHQ Hospital',
+      phone: '0322-7434080',
+      manager_name: 'Store Manager',
       opening_time: '07:30 AM',
       closing_time: '11:30 PM',
       status: 'active'
