@@ -7,12 +7,12 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-const DB_PATH = path.join(DATA_DIR, 'sawera_pos.sqlite');
+const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, 'sawera_pos.sqlite');
 const db = new DatabaseSync(DB_PATH);
 
 // Enable WAL mode and foreign keys

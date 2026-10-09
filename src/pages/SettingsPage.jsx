@@ -82,9 +82,26 @@ export function SettingsPage() {
     }
   };
 
-  const handleDownloadBackup = () => {
-    window.open('/api/backup/download', '_blank');
-    setTimeout(() => loadSettings(), 2000);
+  const handleDownloadBackup = async () => {
+    try {
+      const token = localStorage.getItem('sawera_token');
+      const res = await fetch('/api/backup/download', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Backup download failed');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sawera_sweets_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      setTimeout(() => loadSettings(), 1500);
+    } catch (err) {
+      alert(`Backup download error: ${err.message}`);
+    }
   };
 
   const handleRestoreFile = (e) => {

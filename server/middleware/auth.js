@@ -4,12 +4,17 @@ import db from '../db.js';
 export const JWT_SECRET = process.env.JWT_SECRET || 'sawera-sweets-secret-key-2026-pakistan';
 
 export function authenticate(req, res, next) {
+  let token = null;
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authentication required. Please login.' });
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query?.token) {
+    token = req.query.token;
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required. Please login.' });
+  }
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     
