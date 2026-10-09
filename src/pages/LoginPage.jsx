@@ -13,9 +13,9 @@ import {
 
 export function LoginPage() {
   const { login, lang } = useAuth();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [forgotMsg, setForgotMsg] = useState('');
@@ -64,13 +64,6 @@ export function LoginPage() {
     }
   };
 
-  const fillCredentials = (u, p) => {
-    setUsername(u);
-    setPassword(p);
-    setErrorMsg('');
-    setForgotMsg('');
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-amber-950/40 to-slate-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
@@ -105,7 +98,7 @@ export function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full text-xs sm:text-sm pl-9 pr-3 rtl:pl-3 rtl:pr-9 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
-                  placeholder="admin or cashier1"
+                  placeholder="Enter username or email"
                 />
               </div>
             </div>
@@ -130,7 +123,7 @@ export function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full text-xs sm:text-sm pl-9 pr-3 rtl:pl-3 rtl:pr-9 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
-                  placeholder="••••••••"
+                  placeholder="Enter password"
                 />
               </div>
             </div>
@@ -173,48 +166,10 @@ export function LoginPage() {
             </button>
           </form>
 
-          {/* DEMO ACCOUNTS QUICK-FILL CARDS */}
-          <div className="mt-6 pt-5 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center mb-2.5">
-              Instant Demo Quick-Fill Roles
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <button
-                type="button"
-                onClick={() => fillCredentials('admin', 'admin123')}
-                className="p-2 rounded-xl border border-slate-200 hover:border-amber-500 bg-slate-50 hover:bg-amber-50 transition text-left rtl:text-right"
-              >
-                <div className="font-bold text-slate-900">👑 Admin / Owner</div>
-                <div className="text-[10px] text-slate-500">All 4 branches &amp; profits</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fillCredentials('manager1', 'manager123')}
-                className="p-2 rounded-xl border border-slate-200 hover:border-amber-500 bg-slate-50 hover:bg-amber-50 transition text-left rtl:text-right"
-              >
-                <div className="font-bold text-slate-900">👔 Branch Manager</div>
-                <div className="text-[10px] text-slate-500">Inventory &amp; Purchases</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fillCredentials('cashier1', 'cashier123')}
-                className="p-2 rounded-xl border border-slate-200 hover:border-amber-500 bg-slate-50 hover:bg-amber-50 transition text-left rtl:text-right"
-              >
-                <div className="font-bold text-slate-900">💵 Cashier - B1 Saddar</div>
-                <div className="text-[10px] text-slate-500">POS &amp; Customer billing</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fillCredentials('cashier2', 'cashier123')}
-                className="p-2 rounded-xl border border-slate-200 hover:border-amber-500 bg-slate-50 hover:bg-amber-50 transition text-left rtl:text-right"
-              >
-                <div className="font-bold text-slate-900">💵 Cashier - B2 Gulberg</div>
-                <div className="text-[10px] text-slate-500">POS &amp; Customer billing</div>
-              </button>
-            </div>
+          {/* SECURE TERMINAL FOOTER */}
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-1.5 text-slate-400 text-[11px] font-semibold">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>Authorized Personnel Only • Sawera Sweets &amp; Bakers</span>
           </div>
 
         </div>
