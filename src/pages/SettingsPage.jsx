@@ -139,23 +139,23 @@ export function SettingsPage() {
     reader.readAsText(file);
   };
 
-  const handleResetDemo = async () => {
+  const handleClearSales = async () => {
     const promptMsg = lang === 'ur'
-      ? 'کیا آپ تمام پاکستانی مٹھائیاں، بیکری آئٹمز، 4 برانچیں اور نمونہ سیلز ریکارڈز دوبارہ ری سیٹ کرنا چاہتے ہیں؟'
-      : 'Re-seed all Pakistani sweets, bakery items, 4 branches and sample records?';
+      ? 'کیا آپ تمام ٹیسٹ سیلز اور آرڈر ہسٹری صاف کرنا چاہتے ہیں؟ آپ کے پراڈکٹس اور انوینٹری محفوظ رہیں گے، صرف سیلز 0 ہو جائیں گی۔'
+      : 'Clear all test sales and order history? Products and inventory will be preserved, only sales will reset to 0.';
 
     if (!confirm(promptMsg)) return;
     try {
-      const res = await fetch('/api/settings/reset-demo', {
+      const res = await fetch('/api/sales/clear-all-sales', {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('sawera_token')}` }
       });
-      if (res.ok) {
-        alert(lang === 'ur' ? 'ڈیمو ڈیٹا دوبارہ لوڈ ہو گیا!' : 'Demo data re-seeded!');
-        window.location.reload();
-      }
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to clear sales');
+      alert(lang === 'ur' ? 'تمام سیلز کامیابی سے صاف ہو گئیں! اب سیلز 0 سے شروع ہوں گی۔' : d.message);
+      window.location.reload();
     } catch (err) {
-      alert('Reset failed.');
+      alert(`Clear sales failed: ${err.message}`);
     }
   };
 
@@ -534,20 +534,20 @@ export function SettingsPage() {
               </span>
             </button>
 
-            {/* Reset Demo Data */}
+            {/* Clear Sales History */}
             <button
               type="button"
-              onClick={handleResetDemo}
+              onClick={handleClearSales}
               className="p-4 rounded-xl border border-slate-300 hover:border-amber-500 bg-white hover:bg-amber-50/50 transition flex flex-col items-center justify-center text-center space-y-2 group cursor-pointer"
             >
               <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center group-hover:scale-110 transition">
-                <RefreshCw className="w-5 h-5" />
+                <Trash2 className="w-5 h-5 text-amber-700" />
               </div>
               <span className="font-extrabold text-xs text-slate-800">
-                {lang === 'ur' ? 'ڈیمو ڈیٹا دوبارہ لوڈ کریں' : 'Re-Seed Demo Data'}
+                {lang === 'ur' ? 'تمام سیلز ہسٹری صاف کریں' : 'Clear Sales History'}
               </span>
               <span className="text-[11px] text-slate-500">
-                {lang === 'ur' ? '4 برانچیں اور نمونہ سیلز ری سیٹ کریں' : 'Reset 4 branches, sweets catalog & sample sales'}
+                {lang === 'ur' ? 'پراڈکٹس محفوظ رہیں گے، صرف سیلز 0 ہو جائیں گی' : 'Reset test sales to 0 while keeping products'}
               </span>
             </button>
 

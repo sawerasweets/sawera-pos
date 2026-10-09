@@ -258,4 +258,37 @@ router.post('/:id/return', authenticate, requirePermission('process_returns'), (
   }
 });
 
+// Clear All Sales & Order History
+router.post('/clear-all-sales', authenticate, requireRole(['admin']), (req, res) => {
+  try {
+    db.exec('PRAGMA foreign_keys = OFF;');
+    db.exec('BEGIN TRANSACTION;');
+    db.exec('DELETE FROM sales;');
+    db.exec('DELETE FROM sale_items;');
+    db.exec('DELETE FROM sales_returns;');
+    db.exec('DELETE FROM sales_return_items;');
+    db.exec('DELETE FROM customer_payments;');
+    db.exec('DELETE FROM parked_bills;');
+    db.exec('DELETE FROM cash_registers;');
+    db.exec("DELETE FROM stock_movements WHERE type = 'sale' OR type = 'sales_return';");
+    db.exec('COMMIT;');
+    db.exec('PRAGMA foreign_keys = ON;');
+    db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+
+    logAudit({
+      userId: req.user.id,
+      username: req.user.username,
+      branchId: req.user.branch_id,
+      action: 'CLEAR_SALES',
+      entity: 'SALES',
+      details: 'Admin cleared all sales and transaction history for fresh start'
+    });
+
+    res.json({ message: 'All sales transactions and order history cleared successfully! Starting fresh with 0 sales.' });
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    res.status(500).json({ error: `Failed to clear sales: ${err.message}` });
+  }
+});
+
 export default router;
