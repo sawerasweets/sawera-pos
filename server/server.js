@@ -27,6 +27,7 @@ import wasteRoutes from './routes/waste.js';
 import stockAuditRoutes from './routes/stockAudit.js';
 import quotationRoutes from './routes/quotations.js';
 import promotionRoutes from './routes/promotions.js';
+import { initTursoSync, triggerCloudSync, flushCloudSyncNow } from './tursoSync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,6 +42,18 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Auto-sync mutations to Turso Cloud (debounced after any successful API write)
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method) && req.path.startsWith('/api/')) {
+    res.on('finish', () => {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        triggerCloudSync();
+      }
+    });
+  }
+  next();
+});
 
 // Static uploads directory
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
@@ -100,9 +113,29 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`  SAWERA SWEET & BAKERS - POS & SHOP MANAGEMENT`);
-  console.log(`  Server running on http://localhost:${PORT}`);
-  console.log(`====================================================`);
+async function startServer() {
+  // Initialize Turso Cloud Sync (automatically pulls latest cloud state on container boot)
+  await initTursoSync();
+
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`  SAWERA SWEET & BAKERS - POS & SHOP MANAGEMENT`);
+    console.log(`  Server running on http://localhost:${PORT}`);
+    console.log(`  Cloud Database Sync: ACTIVE (Turso Lifetime Storage)`);
+    console.log(`====================================================`);
+  });
+}
+
+startServer();
+
+// Graceful shutdown flush
+process.on('SIGTERM', async () => {
+  console.log('Received SIGTERM, flushing final state to Turso Cloud...');
+  await flushCloudSyncNow();
+  process.exit(0);
+});
+process.on('SIGINT', async () => {
+  console.log('Received SIGINT, flushing final state to Turso Cloud...');
+  await flushCloudSyncNow();
+  process.exit(0);
 });
