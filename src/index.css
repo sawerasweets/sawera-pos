@@ -84,26 +84,29 @@
   .thermal-receipt {
     width: 72mm !important;
     max-width: 72mm !important;
-    margin: 0 !important;
-    padding: 1mm 2mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 3mm !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-    font-size: 10px !important;
-    line-height: 1.18 !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
     color: #000 !important;
     background: #fff !important;
     border: none !important;
     box-shadow: none !important;
     display: block !important;
+    -webkit-font-smoothing: antialiased !important;
+    text-rendering: optimizeLegibility !important;
   }
 
   .thermal-receipt img {
-    width: 24px !important;
-    height: 24px !important;
-    max-width: 24px !important;
-    max-height: 24px !important;
+    width: 44px !important;
+    height: 44px !important;
+    max-width: 44px !important;
+    max-height: 44px !important;
     object-fit: cover !important;
     margin: 0 auto !important;
     display: block !important;
+    border-radius: 9999px !important;
   }
 
   .a4-invoice {
