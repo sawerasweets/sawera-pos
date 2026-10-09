@@ -107,16 +107,16 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
               padding: ${template === 'thermal' ? '2mm 3mm' : '10mm'};
               color: #000;
               background: #fff;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
               width: ${template === 'thermal' ? '72mm' : '100%'};
               box-sizing: border-box;
               font-size: ${template === 'thermal' ? '11px' : '12px'};
-              line-height: 1.25;
+              line-height: 1.3;
               -webkit-font-smoothing: antialiased;
               text-rendering: optimizeLegibility;
             }
             * { box-sizing: border-box; }
-            img { width: 44px !important; height: 44px !important; max-width: 44px !important; max-height: 44px !important; object-fit: cover !important; margin: 0 auto !important; display: block !important; border-radius: 9999px !important; }
+            img { width: 62px !important; height: 62px !important; max-width: 62px !important; max-height: 62px !important; object-fit: cover !important; margin: 0 auto 5px auto !important; display: block !important; border-radius: 9999px !important; }
             svg { max-width: 100%; }
             .thermal-receipt {
               width: 72mm !important;
@@ -126,7 +126,15 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
               border: none !important;
               box-shadow: none !important;
               color: #000 !important;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+              font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+            }
+            .thermal-receipt table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              border: 1px solid #000 !important;
+            }
+            .thermal-receipt th, .thermal-receipt td {
+              border: 1px solid #000 !important;
             }
             .a4-invoice {
               width: 100% !important;
@@ -135,8 +143,21 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
               border: none !important;
               box-shadow: none !important;
             }
-            ${Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map(s => s.outerHTML).join('\n')}
+            .flex { display: flex; }
+            .justify-between { justify-content: space-between; }
+            .items-center { align-items: center; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .text-left { text-align: left; }
+            .font-bold, .font-semibold { font-weight: bold; }
+            .font-black { font-weight: 900; }
+            .uppercase { text-transform: uppercase; }
+            .space-y-0\\.5 > * + * { margin-top: 2px; }
+            .border-t { border-top: 1px solid #000; }
+            .border-b { border-bottom: 1px solid #000; }
+            .border-dashed { border-style: dashed; }
           </style>
+          ${Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map(s => s.outerHTML).join('\n')}
         </head>
         <body>
           ${receiptHtml}
@@ -242,151 +263,138 @@ export function InvoicePrintModal({ sale, onClose, autoPrint = false }) {
         {/* Printable Area */}
         <div id="printable-receipt-area" className="p-4 overflow-y-auto flex-1 bg-slate-100 flex justify-center invoice-printable-wrapper">
           
-          {/* THERMAL 80MM TEMPLATE (Clean Crisp Professional Layout) */}
+          {/* THERMAL 80MM TEMPLATE (Exact Replica of Reference POS Receipt) */}
           {template === 'thermal' && (
             <div
               dir={isUrdu ? 'rtl' : 'ltr'}
-              className={`thermal-receipt bg-white p-3.5 shadow-sm w-full max-w-[320px] text-slate-900 leading-tight border border-slate-200 rounded-lg font-sans antialiased ${
-                isUrdu ? 'font-urdu text-[11.5px]' : 'text-[10.5px]'
-              }`}
+              className="thermal-receipt bg-white p-3 shadow-sm w-full max-w-[320px] text-black leading-tight border border-slate-300 rounded-lg"
+              style={{ fontFamily: 'Arial, "Helvetica Neue", Helvetica, sans-serif' }}
             >
               
-              {/* Receipt Header: 44px Clean Logo, Store Name, Address */}
-              <div className="text-center pb-1">
-                <div className="w-11 h-11 rounded-full overflow-hidden mx-auto mb-1.5 border border-slate-300 bg-white shadow-xs">
-                  <img src="/logo.png" alt="Sawera Sweets" className="w-full h-full object-cover" />
-                </div>
-                {isUrdu ? (
-                  <h2 className="text-base font-black text-slate-900 leading-tight">
-                    سویرا سویٹس اینڈ بیکرز
-                  </h2>
-                ) : (
-                  <h2 className="text-sm font-black tracking-wider uppercase text-slate-900 leading-tight">
-                    SAWERA SWEET &amp; BAKERS
-                  </h2>
-                )}
-                
-                <p className="text-[10px] text-slate-700 font-medium mt-0.5">
-                  {sale.branch_address || (isUrdu ? 'شاپ 1-4، صدر کمرشل ایریا، راولپنڈی' : 'Shop 1-4, Saddar Commercial Area, Rawalpindi')}
-                  {sale.branch_phone && ` • ${sale.branch_phone}`}
+              {/* Receipt Header: Circular Logo, Name, Address, Phone, NTN, POS No */}
+              <div className="text-center pb-2">
+                <img
+                  src="/logo.png"
+                  alt="Sawera Sweets & Bakers"
+                  className="w-[62px] h-[62px] rounded-full object-cover mx-auto mb-1 border border-black/20"
+                />
+                <h2 className="text-sm font-black tracking-wide text-black uppercase">
+                  {isUrdu ? 'سویرا سویٹس اینڈ بیکرز' : 'Sawera Sweets & Bakers'}
+                </h2>
+                <p className="text-[10px] text-black mt-0.5">
+                  {sale.branch_address || (isUrdu ? 'صدر بازار، راولپنڈی' : 'Saddar Bazar, Rawalpindi')}
+                </p>
+                <p className="text-[10px] text-black">
+                  Ph: {sale.branch_phone || '051-5551234'} Cell: 0300-1112233
+                </p>
+                <p className="text-[10px] text-black">
+                  NTN: 8765432-1
+                </p>
+                <p className="text-[10px] text-black font-semibold">
+                  POS No: {sale.branch_id || 1}
                 </p>
               </div>
 
-              {/* Dashed Separator */}
-              <div className="border-b border-dashed border-slate-400 my-1.5" />
-
-              {/* Invoice & Date Header */}
-              <div className="flex justify-between items-center text-[10px] text-slate-800 font-medium">
-                <span className="font-bold">{isUrdu ? 'بل نمبر:' : 'Inv:'} #{sale.invoice_no}</span>
-                <span>{new Date(sale.created_at || Date.now()).toLocaleDateString('en-GB')} {new Date(sale.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              {/* Order Meta Header: Cashier, Mop, Receipt No, Date */}
+              <div className="text-[10.5px] text-black pt-1 mb-1 space-y-0.5">
+                <div className="flex justify-between">
+                  <span>Cashier: {sale.cashier_name || 'Admin'}</span>
+                  <span>Mop : {sale.payment_method ? sale.payment_method.toUpperCase() : 'CASH'} Sales</span>
+                </div>
+                <div className="font-bold text-[11px]">
+                  Receipt No: {sale.invoice_no}
+                </div>
+                <div>
+                  Date: {new Date(sale.created_at || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')} {new Date(sale.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </div>
               </div>
-              {sale.customer_name && (
-                <div className="text-[9.5px] text-slate-800 font-semibold text-left rtl:text-right mt-0.5">
-                  {isUrdu ? 'گاہک:' : 'Cust:'} {sale.customer_name} {sale.customer_phone ? `(${sale.customer_phone})` : ''}
-                </div>
-              )}
 
-              {/* Dashed Separator */}
-              <div className="border-b border-dashed border-slate-400 my-1.5" />
-
-              {/* Line Items Table: # | Product | Qty | Price | Total */}
-              <div>
-                <div className="flex justify-between font-bold text-[10px] pb-1 border-b border-slate-800 text-slate-900">
-                  <span className="w-[8%] text-center">{isUrdu ? 'نمبر' : '#'}</span>
-                  <span className="w-[46%]">{isUrdu ? 'آئٹم' : 'Product'}</span>
-                  <span className="w-[12%] text-center">{isUrdu ? 'تعداد' : 'Qty'}</span>
-                  <span className="w-[16%] text-right rtl:text-left">{isUrdu ? 'ریٹ' : 'Price'}</span>
-                  <span className="w-[18%] text-right rtl:text-left">{isUrdu ? 'ٹوٹل' : 'Total'}</span>
-                </div>
-
-                <div className="divide-y divide-slate-100">
-                  {(sale.items || []).map((item, idx) => {
-                    const itemName = isUrdu && item.product_name_urdu ? item.product_name_urdu : item.product_name;
-                    return (
-                      <div key={idx} className="py-1 text-[10.5px]">
-                        {item.weight_grams ? (
-                          <div>
-                            <div className="flex items-start">
-                              <span className="w-[8%] text-center text-slate-500 font-semibold">{idx + 1}</span>
-                              <span className="w-[92%] font-bold text-slate-900 truncate">{itemName}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[9px] pl-[8%] rtl:pr-[8%] rtl:pl-0 text-slate-600 mt-0.5">
-                              <span>{item.weight_grams}g @ Rs. {Number(item.rate_per_kg || item.unit_price).toLocaleString()}/kg</span>
-                              <span className="font-bold text-slate-900">Rs. {Number(item.line_total).toLocaleString()}</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center text-[10.5px]">
-                            <span className="w-[8%] text-center text-slate-500 font-semibold">{idx + 1}</span>
-                            <span className="w-[46%] font-bold text-slate-900 truncate">{itemName}</span>
-                            <span className="w-[12%] text-center font-semibold text-slate-800">{item.quantity}</span>
-                            <span className="w-[16%] text-right rtl:text-left font-semibold text-slate-700">
-                              {Number(item.unit_price).toLocaleString()}
-                            </span>
-                            <span className="w-[18%] text-right rtl:text-left font-bold text-slate-900">
-                              {Number(item.line_total).toLocaleString()}
-                            </span>
-                          </div>
+              {/* TABLE WITH REAL BORDERS (Sr. | Product | Price | Qty | Disc | Total) */}
+              <table className="w-full border-collapse border border-black text-[10px] my-1">
+                <thead>
+                  <tr className="border-b border-black">
+                    <th className="border-r border-black p-0.5 text-center w-[8%] font-bold">Sr.</th>
+                    <th className="border-r border-black p-0.5 px-1 text-left rtl:text-right w-[44%] font-bold">Product</th>
+                    <th className="border-r border-black p-0.5 text-right rtl:text-left w-[16%] font-bold">Price</th>
+                    <th className="border-r border-black p-0.5 text-center w-[10%] font-bold">Qty</th>
+                    <th className="border-r border-black p-0.5 text-right rtl:text-left w-[10%] font-bold">Disc</th>
+                    <th className="p-0.5 text-right rtl:text-left w-[12%] font-bold">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(sale.items || []).map((item, idx) => (
+                    <tr key={idx} className="border-b border-black">
+                      <td className="border-r border-black p-0.5 text-center">{idx + 1}</td>
+                      <td className="border-r border-black p-0.5 px-1 text-left rtl:text-right">
+                        <div className="font-semibold">{isUrdu && item.product_name_urdu ? item.product_name_urdu : item.product_name}</div>
+                        {item.weight_grams && (
+                          <div className="text-[8.5px] text-gray-700">({item.weight_grams}g @ Rs.{item.rate_per_kg}/kg)</div>
                         )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                      </td>
+                      <td className="border-r border-black p-0.5 text-right rtl:text-left">{Number(item.unit_price).toFixed(2)}</td>
+                      <td className="border-r border-black p-0.5 text-center">{item.quantity}</td>
+                      <td className="border-r border-black p-0.5 text-right rtl:text-left">{Number(item.discount_amount || 0).toFixed(0)}</td>
+                      <td className="p-0.5 text-right rtl:text-left font-semibold">{Number(item.line_total).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="font-bold border-t border-black">
+                    <td colSpan="3" className="border-r border-black p-0.5 px-1 text-left rtl:text-right">Gross Total:</td>
+                    <td className="border-r border-black p-0.5 text-center">
+                      {(sale.items || []).reduce((acc, i) => acc + (Number(i.quantity) || 0), 0)}
+                    </td>
+                    <td className="border-r border-black p-0.5 text-right rtl:text-left">
+                      {(sale.items || []).reduce((acc, i) => acc + (Number(i.discount_amount) || 0), 0).toFixed(0)}
+                    </td>
+                    <td className="p-0.5 text-right rtl:text-left">
+                      {(sale.items || []).reduce((acc, i) => acc + (Number(i.line_total) || 0), 0).toFixed(0)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
-              {/* Dashed Separator */}
-              <div className="border-b border-dashed border-slate-400 my-1.5" />
+              {/* Totals Section */}
+              <div className="text-[10.5px] text-black pt-1 space-y-0.5">
+                {Number(sale.tax_amount) > 0 && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>Value Excluding Sales Tax:</span>
+                      <span className="font-semibold">{(Number(sale.grand_total) - Number(sale.tax_amount)).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Sales Tax :</span>
+                      <span className="font-semibold">{Number(sale.tax_amount).toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
 
-              {/* Totals Summary */}
-              <div className="space-y-1 text-[10.5px]">
                 {Number(sale.discount_amount) > 0 && (
-                  <div className="flex justify-between text-rose-600 font-semibold text-[10px]">
-                    <span>{isUrdu ? 'رعایت:' : 'Discount:'}</span>
-                    <span>- Rs. {Number(sale.discount_amount).toLocaleString()}</span>
+                  <div className="flex justify-between">
+                    <span>Discount :</span>
+                    <span className="font-semibold">-{Number(sale.discount_amount).toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center font-black text-sm text-slate-900">
-                  <span>{isUrdu ? 'کل رقم:' : 'TOTAL :'}</span>
-                  <span className="text-base font-black">Rs. {Number(sale.grand_total || 0).toLocaleString()}</span>
+
+                <div className="flex justify-between font-black text-xs pt-1 border-t border-black">
+                  <span>Net Total {Number(sale.tax_amount) > 0 ? '(Including Sales Tax)' : ''}:</span>
+                  <span className="text-sm font-black">{Number(sale.grand_total || 0).toFixed(0)}</span>
                 </div>
-                <div className="flex justify-between items-center text-[10px] text-slate-800 font-bold">
-                  <span>
-                    {isUrdu ? 'ادائیگی:' : 'Paid:'}{' '}
-                    <span className="uppercase">
-                      {isUrdu
-                        ? (sale.payment_method === 'cash' ? 'نقد' : sale.payment_method === 'split' ? 'مشترکہ' : sale.payment_method === 'credit' ? 'ادھار' : sale.payment_method)
-                        : sale.payment_method}
-                    </span>
-                  </span>
-                  <span>Rs. {Number(sale.paid_amount || 0).toLocaleString()}</span>
+
+                <div className="flex justify-between font-semibold pt-0.5">
+                  <span>Cash:</span>
+                  <span>{Number(sale.paid_amount || sale.grand_total || 0).toFixed(2)}</span>
                 </div>
-                {Number(sale.change_amount) > 0 && (
-                  <div className="flex justify-between items-center font-bold text-emerald-700 text-[10px]">
-                    <span>{isUrdu ? 'بقایا واپس:' : 'Change:'}</span>
-                    <span>Rs. {Number(sale.change_amount).toLocaleString()}</span>
-                  </div>
-                )}
-                {Number(sale.credit_amount) > 0 && (
-                  <div className="flex justify-between items-center font-bold text-rose-700 text-[10px]">
-                    <span>{isUrdu ? 'ادھار کھاتہ:' : 'Credit Added:'}</span>
-                    <span>Rs. {Number(sale.credit_amount).toLocaleString()}</span>
-                  </div>
-                )}
+
+                <div className="flex justify-between font-semibold">
+                  <span>Balance:</span>
+                  <span>{Number(sale.change_amount || 0).toFixed(2)}</span>
+                </div>
               </div>
 
-              {/* Dashed Separator */}
-              <div className="border-b border-dashed border-slate-400 my-1.5" />
-
-              {/* Clean Professional Footer: Thanks for Shopping */}
-              <div className="py-1 text-center">
-                <p className="text-[11px] font-black text-slate-900 tracking-wider uppercase">
-                  {isUrdu ? 'تشریف لانے کا شکریہ!' : 'THANKS FOR SHOPPING!'}
+              {/* Clean Footer */}
+              <div className="pt-2 text-center border-t border-dashed border-black mt-2">
+                <p className="text-[11px] font-bold tracking-wide uppercase">
+                  THANKS FOR SHOPPING!
                 </p>
-                {isUrdu && (
-                  <p className="text-[9px] text-slate-600 font-sans mt-0.5">
-                    THANKS FOR SHOPPING!
-                  </p>
-                )}
               </div>
 
             </div>
