@@ -25,7 +25,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# SQLite WAL and lock files (keep sawera_pos.sqlite database file)
+# SQLite database files (keep user data safe locally, never overwrite via Git)
+data/*.sqlite
 data/*.sqlite-journal
 data/*.sqlite-wal
 data/*.sqlite-shm
