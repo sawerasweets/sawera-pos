@@ -107,7 +107,7 @@ router.post('/', authenticate, requirePermission('manage_products'), (req, res) 
   const {
     name, name_urdu, code, sku, barcode, category_id, brand,
     purchase_price = 0, sale_price = 0, wholesale_price = 0,
-    min_stock = 5, unit = 'Piece', supplier_id, expiry_date, image_url, description,
+    min_stock = 0, unit = 'Piece', supplier_id, expiry_date, image_url, description,
     initial_stock = 0
   } = req.body;
 
@@ -119,23 +119,54 @@ router.post('/', authenticate, requirePermission('manage_products'), (req, res) 
   const generatedBarcode = (barcode || `8964${Date.now().toString().slice(-8)}`).trim();
 
   // Validate duplicate barcode among active products
-  const existingBarcode = db.prepare("SELECT id, name, code, barcode FROM products WHERE barcode = ? AND status = 'active'").get(generatedBarcode);
-  if (existingBarcode) {
+  const existingActiveBarcode = db.prepare("SELECT id, name, code, barcode FROM products WHERE barcode = ? AND status = 'active'").get(generatedBarcode);
+  if (existingActiveBarcode) {
     return res.status(400).json({
-      error: `Barcode '${generatedBarcode}' already belongs to product: '${existingBarcode.name}' (Code: ${existingBarcode.code}). Duplicate barcodes are not allowed.`,
+      error: `Barcode '${generatedBarcode}' already belongs to product: '${existingActiveBarcode.name}' (Code: ${existingActiveBarcode.code}). Duplicate barcodes are not allowed.`,
       duplicate: 'barcode',
-      existing_product: existingBarcode
+      existing_product: existingActiveBarcode
     });
   }
 
   // Validate duplicate code among active products
-  const existingCode = db.prepare("SELECT id, name, code FROM products WHERE code = ? AND status = 'active'").get(generatedCode);
-  if (existingCode) {
+  const existingActiveCode = db.prepare("SELECT id, name, code FROM products WHERE code = ? AND status = 'active'").get(generatedCode);
+  if (existingActiveCode) {
     return res.status(400).json({
-      error: `Product code '${generatedCode}' already belongs to product: '${existingCode.name}'. Duplicate codes are not allowed.`,
+      error: `Product code '${generatedCode}' already belongs to product: '${existingActiveCode.name}'. Duplicate codes are not allowed.`,
       duplicate: 'code',
-      existing_product: existingCode
+      existing_product: existingActiveCode
     });
+  }
+
+  // Clean or release any inactive product holding this barcode/code so SQLite UNIQUE constraint is satisfied
+  try {
+    const inactiveBarcodeHolder = db.prepare("SELECT id FROM products WHERE barcode = ? AND status != 'active'").get(generatedBarcode);
+    if (inactiveBarcodeHolder) {
+      const saleCount = db.prepare('SELECT COUNT(*) as count FROM sale_items WHERE product_id = ?').get(inactiveBarcodeHolder.id)?.count || 0;
+      const purchaseCount = db.prepare('SELECT COUNT(*) as count FROM purchase_items WHERE product_id = ?').get(inactiveBarcodeHolder.id)?.count || 0;
+      if (saleCount === 0 && purchaseCount === 0) {
+        db.prepare('DELETE FROM branch_inventory WHERE product_id = ?').run(inactiveBarcodeHolder.id);
+        db.prepare('DELETE FROM stock_movements WHERE product_id = ?').run(inactiveBarcodeHolder.id);
+        db.prepare('DELETE FROM products WHERE id = ?').run(inactiveBarcodeHolder.id);
+      } else {
+        db.prepare("UPDATE products SET barcode = ? WHERE id = ?").run(`${generatedBarcode}_del_${Date.now()}`, inactiveBarcodeHolder.id);
+      }
+    }
+
+    const inactiveCodeHolder = db.prepare("SELECT id FROM products WHERE code = ? AND status != 'active'").get(generatedCode);
+    if (inactiveCodeHolder) {
+      const saleCount = db.prepare('SELECT COUNT(*) as count FROM sale_items WHERE product_id = ?').get(inactiveCodeHolder.id)?.count || 0;
+      const purchaseCount = db.prepare('SELECT COUNT(*) as count FROM purchase_items WHERE product_id = ?').get(inactiveCodeHolder.id)?.count || 0;
+      if (saleCount === 0 && purchaseCount === 0) {
+        db.prepare('DELETE FROM branch_inventory WHERE product_id = ?').run(inactiveCodeHolder.id);
+        db.prepare('DELETE FROM stock_movements WHERE product_id = ?').run(inactiveCodeHolder.id);
+        db.prepare('DELETE FROM products WHERE id = ?').run(inactiveCodeHolder.id);
+      } else {
+        db.prepare("UPDATE products SET code = ? WHERE id = ?").run(`${generatedCode}_del_${Date.now()}`, inactiveCodeHolder.id);
+      }
+    }
+  } catch (cleanErr) {
+    console.warn('[Products] Notice while releasing inactive barcodes:', cleanErr.message);
   }
 
   try {
@@ -225,6 +256,14 @@ router.put('/:id', authenticate, requirePermission('manage_products'), (req, res
         existing_product: existingBarcode
       });
     }
+
+    // Release any inactive product holding this barcode
+    try {
+      const inactiveHolder = db.prepare("SELECT id FROM products WHERE barcode = ? AND id != ? AND status != 'active'").get(barcode.trim(), prodId);
+      if (inactiveHolder) {
+        db.prepare("UPDATE products SET barcode = ? WHERE id = ?").run(`${barcode.trim()}_del_${Date.now()}`, inactiveHolder.id);
+      }
+    } catch (_) {}
   }
 
   // Check duplicate code
@@ -237,6 +276,14 @@ router.put('/:id', authenticate, requirePermission('manage_products'), (req, res
         existing_product: existingCode
       });
     }
+
+    // Release any inactive product holding this code
+    try {
+      const inactiveHolder = db.prepare("SELECT id FROM products WHERE code = ? AND id != ? AND status != 'active'").get(code.trim(), prodId);
+      if (inactiveHolder) {
+        db.prepare("UPDATE products SET code = ? WHERE id = ?").run(`${code.trim()}_del_${Date.now()}`, inactiveHolder.id);
+      }
+    } catch (_) {}
   }
 
   try {
@@ -309,7 +356,9 @@ router.put('/:id', authenticate, requirePermission('manage_products'), (req, res
   }
 });
 
-// Delete product (Soft delete to preserve past invoice history)
+// Delete product:
+// If never sold or purchased, HARD delete so barcode & code are completely freed.
+// If sold, soft delete but release barcode & code by appending _del_<timestamp>.
 router.delete('/:id', authenticate, requirePermission('delete_products'), (req, res) => {
   const prodId = Number(req.params.id);
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(prodId);
@@ -317,20 +366,46 @@ router.delete('/:id', authenticate, requirePermission('delete_products'), (req, 
     return res.status(404).json({ error: 'Product not found' });
   }
 
-  // Soft delete
-  db.prepare("UPDATE products SET status = 'inactive', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(prodId);
+  const saleCount = db.prepare('SELECT COUNT(*) as count FROM sale_items WHERE product_id = ?').get(prodId)?.count || 0;
+  const purchaseCount = db.prepare('SELECT COUNT(*) as count FROM purchase_items WHERE product_id = ?').get(prodId)?.count || 0;
 
-  logAudit({
-    userId: req.user.id,
-    username: req.user.username,
-    branchId: req.user.branch_id,
-    action: 'DELETE_PRODUCT',
-    entity: 'PRODUCTS',
-    entityId: prodId,
-    details: `Deactivated product "${product.name}" (${product.code})`
-  });
+  if (saleCount === 0 && purchaseCount === 0) {
+    // Hard delete: completely removes product & its inventory records
+    db.prepare('DELETE FROM branch_inventory WHERE product_id = ?').run(prodId);
+    db.prepare('DELETE FROM stock_movements WHERE product_id = ?').run(prodId);
+    db.prepare('DELETE FROM products WHERE id = ?').run(prodId);
 
-  res.json({ message: 'Product deactivated successfully' });
+    logAudit({
+      userId: req.user.id,
+      username: req.user.username,
+      branchId: req.user.branch_id,
+      action: 'DELETE_PRODUCT',
+      entity: 'PRODUCTS',
+      entityId: prodId,
+      details: `Permanently deleted product "${product.name}" (${product.code}) and freed barcode ${product.barcode || ''}`
+    });
+
+    return res.json({ message: 'Product deleted permanently and barcode freed.' });
+  } else {
+    // Soft delete: keep row for historical receipts, but release barcode & code
+    const freedBarcode = product.barcode ? `${product.barcode}_del_${Date.now()}` : null;
+    const freedCode = `${product.code}_del_${Date.now()}`;
+
+    db.prepare("UPDATE products SET status = 'inactive', barcode = ?, code = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+      .run(freedBarcode, freedCode, prodId);
+
+    logAudit({
+      userId: req.user.id,
+      username: req.user.username,
+      branchId: req.user.branch_id,
+      action: 'DEACTIVATE_PRODUCT',
+      entity: 'PRODUCTS',
+      entityId: prodId,
+      details: `Deactivated product "${product.name}" (${product.code}) and released original barcode`
+    });
+
+    return res.json({ message: 'Product deactivated and barcode freed for future use.' });
+  }
 });
 
 export default router;

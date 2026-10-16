@@ -107,7 +107,7 @@ export function initDatabase() {
       purchase_price REAL NOT NULL DEFAULT 0,
       sale_price REAL NOT NULL DEFAULT 0,
       wholesale_price REAL DEFAULT 0,
-      min_stock REAL DEFAULT 5,
+      min_stock REAL DEFAULT 0,
       unit TEXT DEFAULT 'Piece',
       supplier_id INTEGER REFERENCES suppliers(id) ON DELETE SET NULL,
       expiry_date TEXT,

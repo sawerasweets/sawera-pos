@@ -23,8 +23,14 @@ router.get('/', authenticate, (req, res) => {
   }
 
   if (category && category !== 'all') {
-    query += ` AND e.category = ?`;
-    params.push(category);
+    if (category === 'utilities') {
+      query += ` AND e.category IN ('utilities', 'electricity')`;
+    } else if (category === 'shop') {
+      query += ` AND e.category IN ('shop', 'rent', 'marketing')`;
+    } else {
+      query += ` AND e.category = ?`;
+      params.push(category);
+    }
   }
 
   if (date_from) {

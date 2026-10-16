@@ -61,7 +61,7 @@ export function PosPage() {
     purchase_price: '',
     sale_price: '',
     wholesale_price: 0,
-    min_stock: 5,
+    min_stock: 0,
     unit: 'Piece',
     initial_stock: 20
   });
@@ -757,7 +757,7 @@ export function PosPage() {
       purchase_price: '',
       sale_price: '',
       wholesale_price: 0,
-      min_stock: 5,
+      min_stock: 0,
       unit: 'Piece',
       initial_stock: 20
     });
