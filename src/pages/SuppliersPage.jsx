@@ -9,7 +9,8 @@ import {
   MapPin,
   X,
   History,
-  CheckCircle2
+  CheckCircle2,
+  Trash2
 } from 'lucide-react';
 
 export function SuppliersPage() {
@@ -106,6 +107,45 @@ export function SuppliersPage() {
     }
   };
 
+  const handleDeleteSupplier = async (s) => {
+    const confirmMsg = lang === 'ur'
+      ? `کیا آپ واقعی سپلائر "${s.name}" کو ڈیلیٹ کرنا چاہتے ہیں؟`
+      : `Are you sure you want to delete supplier "${s.name}"?`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch(`/api/suppliers/${s.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('sawera_token')}` }
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to delete');
+      loadSuppliers();
+    } catch (err) {
+      alert(`Delete error: ${err.message}`);
+    }
+  };
+
+  const handleClearAllSuppliers = async () => {
+    const confirmMsg = lang === 'ur'
+      ? 'کیا آپ تمام ڈیمو سپلائرز کو ڈیلیٹ کرنا چاہتے ہیں؟'
+      : 'Are you sure you want to delete ALL demo suppliers?';
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch('/api/suppliers/clear-all-suppliers', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('sawera_token')}` }
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to clear suppliers');
+      alert(lang === 'ur' ? 'تمام ڈیمو سپلائرز ڈیلیٹ کر دیے گئے ہیں!' : d.message);
+      loadSuppliers();
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
   const handlePaySupplierSubmit = async (e) => {
     e.preventDefault();
     if (!payAmount || parseFloat(payAmount) <= 0) return;
@@ -150,13 +190,26 @@ export function SuppliersPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Supplier</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {suppliers.length > 0 && (
+            <button
+              onClick={handleClearAllSuppliers}
+              className="flex items-center space-x-1.5 rtl:space-x-reverse bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl transition cursor-pointer shadow-2xs"
+              title="Delete all demo suppliers"
+            >
+              <Trash2 className="w-4 h-4 text-rose-600" />
+              <span>{lang === 'ur' ? 'تمام ڈیمو سپلائرز ڈیلیٹ کریں' : 'Clear All Demo Suppliers'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{lang === 'ur' ? 'نیا سپلائر شامل کریں' : 'Add New Supplier'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -226,6 +279,13 @@ export function SuppliersPage() {
                           title="View Purchase Ledger"
                         >
                           <History className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSupplier(s)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                          title={lang === 'ur' ? 'سپلائر ڈیلیٹ کریں' : 'Delete Supplier'}
+                        >
+                          <Trash2 className="w-4 h-4 text-rose-500" />
                         </button>
                       </div>
                     </td>

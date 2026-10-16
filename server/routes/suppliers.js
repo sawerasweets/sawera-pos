@@ -183,4 +183,61 @@ router.post('/:id/payments', authenticate, requirePermission('manage_suppliers')
   }
 });
 
+// Delete individual supplier
+router.delete('/:id', authenticate, requirePermission('manage_suppliers'), (req, res) => {
+  const supId = Number(req.params.id);
+  const supplier = db.prepare('SELECT * FROM suppliers WHERE id = ?').get(supId);
+  if (!supplier) {
+    return res.status(404).json({ error: 'Supplier not found' });
+  }
+
+  try {
+    db.exec('PRAGMA foreign_keys = OFF;');
+    db.prepare('DELETE FROM supplier_payments WHERE supplier_id = ?').run(supId);
+    db.prepare('DELETE FROM purchase_items WHERE purchase_id IN (SELECT id FROM purchases WHERE supplier_id = ?)').run(supId);
+    db.prepare('DELETE FROM purchases WHERE supplier_id = ?').run(supId);
+    db.prepare('DELETE FROM suppliers WHERE id = ?').run(supId);
+    db.exec('PRAGMA foreign_keys = ON;');
+
+    logAudit({
+      userId: req.user.id,
+      username: req.user.username,
+      branchId: req.user.branch_id,
+      action: 'DELETE_SUPPLIER',
+      entity: 'SUPPLIERS',
+      entityId: supId,
+      details: `Deleted supplier "${supplier.name}" (${supplier.company || ''})`
+    });
+
+    res.json({ message: 'Supplier deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clear all suppliers and supplier payables
+router.post('/clear-all-suppliers', authenticate, requirePermission('manage_suppliers'), (req, res) => {
+  try {
+    db.exec('PRAGMA foreign_keys = OFF;');
+    db.exec('DELETE FROM supplier_payments;');
+    db.exec('DELETE FROM purchase_items WHERE purchase_id IN (SELECT id FROM purchases);');
+    db.exec('DELETE FROM purchases;');
+    db.exec('DELETE FROM suppliers;');
+    db.exec('PRAGMA foreign_keys = ON;');
+
+    logAudit({
+      userId: req.user.id,
+      username: req.user.username,
+      branchId: req.user.branch_id,
+      action: 'CLEAR_SUPPLIERS',
+      entity: 'SUPPLIERS',
+      details: 'Admin deleted all suppliers and accounts payable'
+    });
+
+    res.json({ message: 'All demo suppliers cleared successfully!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

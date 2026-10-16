@@ -182,11 +182,12 @@ router.post('/clean-demo-data', authenticate, requireRole(['admin']), (req, res)
       VALUES (1, 'Walk-in Customer (عام گاہک)', '0300-0000000', '', 'Counter Sale', 0, 0, 50000, 'active');
     `);
 
-    // Reset supplier balances
-    db.exec('UPDATE suppliers SET opening_balance = 0, current_balance = 0;');
+    // Delete suppliers
+    db.exec('DELETE FROM suppliers;');
 
-    // Reset inventory stock to exactly 0
-    db.exec('UPDATE branch_inventory SET quantity = 0, last_restocked = NULL;');
+    // Reset inventory & products
+    db.exec('DELETE FROM branch_inventory;');
+    db.exec('DELETE FROM products;');
 
     db.exec('PRAGMA foreign_keys = ON;');
     db.exec('COMMIT;');
