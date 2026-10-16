@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db, { logAudit } from '../db.js';
-import { authenticate, requirePermission } from '../middleware/auth.js';
+import { authenticate, requirePermission, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
