@@ -735,39 +735,12 @@ export function seedInitialData(force = false) {
     insertCategory.run(c.name, c.name_urdu, c.icon, c.color, c.sort_order);
   }
 
-  // 5. Suppliers
-  const suppliers = [
-    { name: 'Al-Madina Pure Dairy Farm', company: 'Al-Madina Milk & Desi Ghee Suppliers', phone: '0300-9876541', email: 'madina.dairy@gmail.com', address: 'Sheikhupura Road, Lahore', opening_balance: 15000, current_balance: 45000 },
-    { name: 'Gourmet Flour & Packaging Mills', company: 'Gourmet Packaging Industries', phone: '0321-4567890', email: 'sales@gourmetpackaging.pk', address: 'Industrial Estate, Lahore', opening_balance: 20000, current_balance: 20000 },
-    { name: 'Nestle Pakistan Wholesale', company: 'Nestle Distribution Center', phone: '042-111-637-853', email: 'info@nestle.com.pk', address: 'Multan Road, Lahore', opening_balance: 0, current_balance: 18500 },
-    { name: 'Unilever Pakistan Distributors', company: 'Unilever Personal Care Wholesale', phone: '0300-1122334', email: 'orders@unileverpakistan.com', address: 'Gulberg 3, Lahore', opening_balance: 10000, current_balance: 32000 },
-    { name: 'National Foods & Spices Supply', company: 'National Foods Ltd', phone: '021-35077700', email: 'sales@nationalfoods.com', address: 'Korangi Industrial Area, Karachi', opening_balance: 0, current_balance: 12000 }
-  ];
-
-  const insertSupplier = db.prepare(`
-    INSERT INTO suppliers (name, company, phone, email, address, opening_balance, current_balance)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  for (const s of suppliers) {
-    insertSupplier.run(s.name, s.company, s.phone, s.email, s.address, s.opening_balance, s.current_balance);
-  }
-
-  // 6. Customers (including realistic Udhaar balances)
-  const customers = [
-    { name: 'Chaudhry Akram', phone: '0300-5551122', email: 'akram@gmail.com', address: 'House 45, Street 12, Saddar', opening_balance: 5000, current_balance: 12500, credit_limit: 50000 },
-    { name: 'Haji Muhammad Aslam', phone: '0321-9988776', email: 'aslam.traders@yahoo.com', address: 'Shop 8, Main Bazar', opening_balance: 0, current_balance: 8400, credit_limit: 40000 },
-    { name: 'Malik Zafar Iqbal', phone: '0333-4455667', email: 'malik.zafar@gmail.com', address: 'Civil Lines, Rawalpindi', opening_balance: 3500, current_balance: 3500, credit_limit: 30000 },
-    { name: 'Dr. Shahida Parveen', phone: '0302-7766554', email: 'shahida.doc@hotmail.com', address: 'DHA Phase 5, Block B', opening_balance: 0, current_balance: 0, credit_limit: 60000 },
-    { name: 'Mian Shaukat Ali', phone: '0312-3344556', email: 'shaukat@aliindustries.pk', address: 'Gulberg III, Lahore', opening_balance: 10000, current_balance: 24500, credit_limit: 100000 }
-  ];
-
+  // 5. Customers (Only 1 default Walk-in counter customer)
   const insertCustomer = db.prepare(`
-    INSERT INTO customers (name, phone, email, address, opening_balance, current_balance, credit_limit)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO customers (id, name, phone, email, address, opening_balance, current_balance, credit_limit)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  for (const c of customers) {
-    insertCustomer.run(c.name, c.phone, c.email, c.address, c.opening_balance, c.current_balance, c.credit_limit);
-  }
+  insertCustomer.run(1, 'Walk-in Customer (عام گاہک)', '0300-0000000', '', 'Counter Sale', 0, 0, 50000);
 
   // Log audit
   logAudit({

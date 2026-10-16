@@ -43,7 +43,8 @@ router.post('/', authenticate, requirePermission('manage_settings'), (req, res) 
 router.post('/clean-demo-data', authenticate, requireRole(['admin']), (req, res) => {
   try {
     db.exec('PRAGMA foreign_keys = OFF;');
-    db.exec('UPDATE branch_inventory SET quantity = 0, last_restocked = NULL;');
+    db.exec('DELETE FROM branch_inventory;');
+    db.exec('DELETE FROM products;');
     db.exec('DELETE FROM stock_movements;');
     db.exec('DELETE FROM sales_return_items;');
     db.exec('DELETE FROM sales_returns;');
@@ -69,17 +70,17 @@ router.post('/clean-demo-data', authenticate, requireRole(['admin']), (req, res)
     db.exec('DELETE FROM price_change_requests;');
     db.exec('DELETE FROM customer_payments;');
     db.exec('DELETE FROM supplier_payments;');
+    db.exec('DELETE FROM suppliers;');
     db.exec('DELETE FROM audit_logs;');
     db.exec('DELETE FROM customers;');
     db.exec(`
       INSERT INTO customers (id, name, phone, email, address, opening_balance, current_balance, credit_limit, status)
       VALUES (1, 'Walk-in Customer (عام گاہک)', '0300-0000000', '', 'Counter Sale', 0, 0, 50000, 'active');
     `);
-    db.exec('UPDATE suppliers SET opening_balance = 0, current_balance = 0;');
     db.exec('PRAGMA foreign_keys = ON;');
     db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
 
-    res.json({ message: 'All demo data removed successfully! Product names preserved with 0 stock.' });
+    res.json({ message: 'All demo data (products, suppliers, sales, purchases) removed successfully!' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
