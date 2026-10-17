@@ -309,20 +309,23 @@ router.put('/:id', authenticate, requirePermission('manage_products'), (req, res
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      name ? name.trim() : null,
-      name_urdu || null,
-      code ? code.trim() : null,
-      sku ? sku.trim() : null,
-      barcode ? barcode.trim() : null,
-      category_id ? Number(category_id) : null,
-      brand,
-      purchase_price !== undefined ? Number(purchase_price) : null,
-      sale_price !== undefined ? Number(sale_price) : null,
-      wholesale_price !== undefined ? Number(wholesale_price) : null,
-      min_stock !== undefined ? Number(min_stock) : null,
-      unit,
-      supplier_id ? Number(supplier_id) : null,
-      expiry_date, image_url, description, status,
+      name !== undefined && name !== null ? String(name).trim() : null,
+      name_urdu !== undefined && name_urdu !== null ? String(name_urdu).trim() : null,
+      code !== undefined && code !== null ? String(code).trim() : null,
+      sku !== undefined && sku !== null ? String(sku).trim() : null,
+      barcode !== undefined && barcode !== null ? String(barcode).trim() : null,
+      category_id !== undefined && category_id !== null && category_id !== '' ? Number(category_id) : null,
+      brand !== undefined && brand !== null ? String(brand).trim() : null,
+      purchase_price !== undefined && purchase_price !== null && purchase_price !== '' ? Number(purchase_price) : null,
+      sale_price !== undefined && sale_price !== null && sale_price !== '' ? Number(sale_price) : null,
+      wholesale_price !== undefined && wholesale_price !== null && wholesale_price !== '' ? Number(wholesale_price) : null,
+      min_stock !== undefined && min_stock !== null && min_stock !== '' ? Number(min_stock) : null,
+      unit !== undefined && unit !== null ? String(unit).trim() : null,
+      supplier_id !== undefined && supplier_id !== null && supplier_id !== '' ? Number(supplier_id) : null,
+      expiry_date !== undefined && expiry_date !== null && expiry_date !== '' ? expiry_date : null,
+      image_url !== undefined && image_url !== null ? image_url : null,
+      description !== undefined && description !== null ? description : null,
+      status !== undefined && status !== null ? status : null,
       prodId
     );
 

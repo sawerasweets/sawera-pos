@@ -107,7 +107,15 @@ router.put('/:id', authenticate, requirePermission('manage_customers'), (req, re
         status = COALESCE(?, status),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).run(name, phone, email, address, credit_limit !== undefined ? Number(credit_limit) : null, status, req.params.id);
+  `).run(
+    name !== undefined && name !== null ? String(name).trim() : null,
+    phone !== undefined && phone !== null ? String(phone).trim() : null,
+    email !== undefined && email !== null ? String(email).trim() : null,
+    address !== undefined && address !== null ? String(address).trim() : null,
+    credit_limit !== undefined && credit_limit !== null && credit_limit !== '' ? Number(credit_limit) : null,
+    status !== undefined && status !== null ? String(status).trim() : null,
+    Number(req.params.id)
+  );
 
   const updated = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
   res.json({ message: 'Customer updated', customer: updated });

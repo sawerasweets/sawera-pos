@@ -60,7 +60,12 @@ router.put('/:id', authenticate, requirePermission('manage_settings'), (req, res
         title = COALESCE(?, title),
         value = COALESCE(?, value)
     WHERE id = ?
-  `).run(status, title, value !== undefined ? Number(value) : null, req.params.id);
+  `).run(
+    status !== undefined && status !== null ? String(status) : null,
+    title !== undefined && title !== null ? String(title).trim() : null,
+    value !== undefined && value !== null && value !== '' ? Number(value) : null,
+    Number(req.params.id)
+  );
 
   res.json({ message: 'Promotion updated successfully' });
 });

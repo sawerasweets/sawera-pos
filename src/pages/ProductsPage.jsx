@@ -209,7 +209,8 @@ export function ProductsPage() {
         expiry_date: formData.expiry_date || null,
         image_url: String(formData.image_url || '').trim(),
         description: String(formData.description || '').trim(),
-        initial_stock: parseFloat(formData.initial_stock) || 0
+        initial_stock: parseFloat(formData.initial_stock) || 0,
+        status: formData.status || 'active'
       };
 
       const res = await fetch(url, {

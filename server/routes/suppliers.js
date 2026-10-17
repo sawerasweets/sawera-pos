@@ -102,7 +102,15 @@ router.put('/:id', authenticate, requirePermission('manage_suppliers'), (req, re
         status = COALESCE(?, status),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).run(name, company, phone, email, address, status, req.params.id);
+  `).run(
+    name !== undefined && name !== null ? String(name).trim() : null,
+    company !== undefined && company !== null ? String(company).trim() : null,
+    phone !== undefined && phone !== null ? String(phone).trim() : null,
+    email !== undefined && email !== null ? String(email).trim() : null,
+    address !== undefined && address !== null ? String(address).trim() : null,
+    status !== undefined && status !== null ? String(status).trim() : null,
+    Number(req.params.id)
+  );
 
   const updated = db.prepare('SELECT * FROM suppliers WHERE id = ?').get(req.params.id);
   res.json({ message: 'Supplier updated', supplier: updated });

@@ -83,13 +83,13 @@ router.put('/:id', authenticate, requireRole(['admin']), (req, res) => {
 
   let passwordClause = '';
   const params = [
-    name,
+    name !== undefined && name !== null ? String(name).trim() : null,
     email ? email.trim().toLowerCase() : null,
-    role,
-    branch_id ? Number(branch_id) : null,
-    phone,
-    status,
-    permissions ? JSON.stringify(permissions) : null
+    role !== undefined && role !== null ? String(role).trim() : null,
+    branch_id !== undefined && branch_id !== null && branch_id !== '' ? Number(branch_id) : null,
+    phone !== undefined && phone !== null ? String(phone).trim() : null,
+    status !== undefined && status !== null ? String(status).trim() : null,
+    permissions !== undefined && permissions !== null ? JSON.stringify(permissions) : null
   ];
 
   if (password && password.length >= 6) {
