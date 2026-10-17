@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   Truck,
@@ -10,8 +10,157 @@ import {
   X,
   RotateCcw,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Barcode,
+  Package,
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
+
+// Searchable Product Combobox Component for Row Selection
+function SearchableProductSelect({ products, value, onChange, placeholder = "-- Select Product --" }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const selectedProduct = products.find(p => String(p.id) === String(value));
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filtered = searchTerm.trim()
+    ? products.filter(p => {
+        const q = searchTerm.toLowerCase().trim();
+        return (
+          (p.name && p.name.toLowerCase().includes(q)) ||
+          (p.name_urdu && p.name_urdu.toLowerCase().includes(q)) ||
+          (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+          (p.code && p.code.toLowerCase().includes(q)) ||
+          (p.sku && p.sku.toLowerCase().includes(q))
+        );
+      }).slice(0, 35)
+    : products.slice(0, 35);
+
+  const handleSelect = (p) => {
+    onChange(p.id);
+    setIsOpen(false);
+    setSearchTerm('');
+  };
+
+  return (
+    <div ref={containerRef} className="relative flex-1 min-w-[200px]">
+      {!isOpen ? (
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(true);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }}
+          className={`w-full px-3 py-2 border rounded-lg text-left flex items-center justify-between text-xs transition bg-white ${
+            selectedProduct
+              ? 'border-slate-300 text-slate-900 font-semibold hover:border-amber-500'
+              : 'border-slate-300 text-slate-400 hover:border-slate-400'
+          }`}
+        >
+          <div className="truncate flex items-center gap-1.5 flex-1 mr-1">
+            {selectedProduct ? (
+              <>
+                <span className="font-bold text-slate-900 truncate">{selectedProduct.name}</span>
+                <span className="text-[10px] text-slate-500 font-normal shrink-0">({selectedProduct.unit})</span>
+                {selectedProduct.barcode && (
+                  <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono font-medium hidden sm:inline shrink-0">
+                    {selectedProduct.barcode}
+                  </span>
+                )}
+                <span className="text-[10px] text-emerald-600 font-bold ml-auto shrink-0 hidden md:inline">
+                  Stock: {selectedProduct.branch_stock || 0}
+                </span>
+              </>
+            ) : (
+              <span>{placeholder}</span>
+            )}
+          </div>
+          <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+        </button>
+      ) : (
+        <div className="relative">
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setIsOpen(false);
+              if (e.key === 'Enter' && filtered.length > 0) {
+                e.preventDefault();
+                handleSelect(filtered[0]);
+              }
+            }}
+            placeholder="Type product name, barcode, or code..."
+            className="w-full pl-8 pr-7 py-2 border-2 border-amber-500 rounded-lg text-xs bg-white text-slate-900 font-semibold focus:outline-none shadow-xs"
+          />
+          <Search className="w-3.5 h-3.5 text-amber-600 absolute left-2.5 top-2.5 pointer-events-none" />
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 p-0.5"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Dropdown Options */}
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
+          {filtered.length > 0 ? (
+            filtered.map((p) => {
+              const isSelected = selectedProduct && String(selectedProduct.id) === String(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleSelect(p)}
+                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between gap-2 transition hover:bg-amber-50 ${
+                    isSelected ? 'bg-amber-50 font-bold text-amber-900' : 'text-slate-800'
+                  }`}
+                >
+                  <div className="truncate">
+                    <div className="font-bold truncate flex items-center gap-1.5">
+                      <span>{p.name}</span>
+                      {p.name_urdu && <span className="text-[10px] text-slate-400 font-urdu">{p.name_urdu}</span>}
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                      {p.barcode && <span className="font-mono bg-slate-100 text-slate-700 px-1 py-0.2 rounded">Barcode: {p.barcode}</span>}
+                      {p.code && <span className="font-mono text-slate-400">Code: {p.code}</span>}
+                      <span className="text-emerald-700 font-bold">Stock: {p.branch_stock || 0} {p.unit}</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-bold text-slate-900">Rs. {p.purchase_price || 0}</div>
+                    <div className="text-[10px] text-slate-400">Retail: Rs. {p.sale_price || 0}</div>
+                  </div>
+                </button>
+              );
+            })
+          ) : (
+            <div className="p-3 text-center text-xs text-slate-400">
+              Koi product nahi mili ("{searchTerm}")
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function PurchasesPage() {
   const { activeBranchId, branches, lang } = useAuth();
@@ -31,6 +180,11 @@ export function PurchasesPage() {
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [notes, setNotes] = useState('');
+
+  // Quick Barcode Scan & Search
+  const [quickScanQuery, setQuickScanQuery] = useState('');
+  const [lastAddedProduct, setLastAddedProduct] = useState('');
+  const quickScanRef = useRef(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -89,6 +243,99 @@ export function PurchasesPage() {
   const removeItemRow = (idx) => {
     setItems(items.filter((_, i) => i !== idx));
   };
+
+  // Auto-focus quick scan input when modal opens
+  useEffect(() => {
+    if (showModal) {
+      const timer = setTimeout(() => {
+        quickScanRef.current?.focus();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [showModal]);
+
+  // Quick scan search results
+  const quickSearchResults = quickScanQuery.trim()
+    ? products.filter(p => {
+        const q = quickScanQuery.toLowerCase().trim();
+        return (
+          (p.name && p.name.toLowerCase().includes(q)) ||
+          (p.name_urdu && p.name_urdu.toLowerCase().includes(q)) ||
+          (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+          (p.code && p.code.toLowerCase().includes(q)) ||
+          (p.sku && p.sku.toLowerCase().includes(q))
+        );
+      }).slice(0, 20)
+    : [];
+
+  const addProductToItems = (p) => {
+    const existingIndex = items.findIndex(i => String(i.product_id) === String(p.id));
+    if (existingIndex >= 0) {
+      const updated = [...items];
+      updated[existingIndex].quantity = (Number(updated[existingIndex].quantity) || 0) + 1;
+      setItems(updated);
+    } else {
+      if (items.length === 1 && !items[0].product_id) {
+        setItems([{
+          product_id: p.id,
+          quantity: 1,
+          purchase_price: p.purchase_price || 0
+        }]);
+      } else {
+        setItems([
+          ...items,
+          {
+            product_id: p.id,
+            quantity: 1,
+            purchase_price: p.purchase_price || 0
+          }
+        ]);
+      }
+    }
+    setLastAddedProduct(p.name);
+    setTimeout(() => setLastAddedProduct(''), 3000);
+  };
+
+  const handleQuickScanKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const q = quickScanQuery.trim().toLowerCase();
+      if (!q) return;
+
+      // 1. Exact barcode match
+      const exactBarcode = products.find(p => p.barcode && p.barcode.toLowerCase() === q);
+      if (exactBarcode) {
+        addProductToItems(exactBarcode);
+        setQuickScanQuery('');
+        return;
+      }
+
+      // 2. Exact code match
+      const exactCode = products.find(p => p.code && p.code.toLowerCase() === q);
+      if (exactCode) {
+        addProductToItems(exactCode);
+        setQuickScanQuery('');
+        return;
+      }
+
+      // 3. First search result
+      if (quickSearchResults.length > 0) {
+        addProductToItems(quickSearchResults[0]);
+        setQuickScanQuery('');
+      }
+    }
+  };
+
+  const filteredPurchases = purchases.filter(p => {
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
+    return (
+      (p.purchase_no && p.purchase_no.toLowerCase().includes(s)) ||
+      (p.supplier_name && p.supplier_name.toLowerCase().includes(s)) ||
+      (p.supplier_company && p.supplier_company.toLowerCase().includes(s)) ||
+      (p.branch_name && p.branch_name.toLowerCase().includes(s))
+    );
+  });
 
   // Calculations
   const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.purchase_price), 0);
@@ -159,13 +406,29 @@ export function PurchasesPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Inward Purchase</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search purchases..."
+              className="pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 w-44 sm:w-60"
+            />
+          </div>
+
+          <button
+            onClick={() => {
+              setShowModal(true);
+              setTimeout(() => quickScanRef.current?.focus(), 150);
+            }}
+            className="flex items-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Inward Purchase</span>
+          </button>
+        </div>
       </div>
 
       {/* Purchases Table */}
@@ -185,7 +448,7 @@ export function PurchasesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {purchases.map((p) => (
+              {filteredPurchases.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-50 transition">
                   <td className="py-3 px-3 font-mono font-bold text-slate-900">{p.purchase_no}</td>
                   <td className="py-3 px-3 text-slate-500">{new Date(p.created_at).toLocaleDateString()}</td>
@@ -213,10 +476,10 @@ export function PurchasesPage() {
                 </tr>
               ))}
 
-              {purchases.length === 0 && (
+              {filteredPurchases.length === 0 && (
                 <tr>
                   <td colSpan="8" className="py-12 text-center text-slate-400">
-                    No inward purchases recorded yet.
+                    {search ? `No purchases matching "${search}"` : 'No inward purchases recorded yet.'}
                   </td>
                 </tr>
               )}
@@ -228,7 +491,7 @@ export function PurchasesPage() {
       {/* NEW INWARD PURCHASE MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden my-6">
+          <div className="bg-white rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden my-6">
             
             <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
               <h3 className="font-bold text-base flex items-center gap-2">
@@ -283,33 +546,102 @@ export function PurchasesPage() {
               </div>
 
               {/* Items List */}
-              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-2">
+              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="font-extrabold text-slate-800">Purchased Products &amp; Quantities</span>
                   <button
                     type="button"
                     onClick={addItemRow}
-                    className="text-xs font-bold text-amber-700 hover:underline flex items-center gap-1"
+                    className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-200 transition"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Add Item</span>
+                    <span>Add Empty Row</span>
                   </button>
+                </div>
+
+                {/* Quick Barcode Scanner & Search Bar */}
+                <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-2.5">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-amber-700">
+                      <Barcode className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="text"
+                      ref={quickScanRef}
+                      value={quickScanQuery}
+                      onChange={(e) => setQuickScanQuery(e.target.value)}
+                      onKeyDown={handleQuickScanKeyDown}
+                      placeholder="⚡ Barcode scan karein ya Product ka Name / Code / Barcode likh kar Enter dabayein..."
+                      className="w-full pl-10 pr-8 py-2 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-inner"
+                    />
+                    {quickScanQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setQuickScanQuery('')}
+                        className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {/* Live search suggestions popup for quick add */}
+                    {quickScanQuery.trim() && (
+                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
+                        {quickSearchResults.length > 0 ? (
+                          quickSearchResults.map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                addProductToItems(p);
+                                setQuickScanQuery('');
+                              }}
+                              className="w-full text-left px-3.5 py-2.5 hover:bg-amber-50 transition flex items-center justify-between gap-3"
+                            >
+                              <div>
+                                <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                  <span>{p.name}</span>
+                                  {p.name_urdu && <span className="text-[10px] text-slate-400 font-urdu">{p.name_urdu}</span>}
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                                  {p.barcode && <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono font-semibold">Barcode: {p.barcode}</span>}
+                                  {p.code && <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">Code: {p.code}</span>}
+                                  <span className="text-emerald-700 font-bold">Current Stock: {p.branch_stock || 0} {p.unit}</span>
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <span className="text-xs font-black text-amber-700">Cost: Rs. {p.purchase_price || 0}</span>
+                                <span className="block text-[10px] font-bold text-emerald-700">+ Click to Add</span>
+                              </div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-3 text-center text-xs text-slate-500 font-medium">
+                            Koi product nahi mili ("{quickScanQuery}")
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-amber-800 font-medium mt-1 px-1">
+                    <span>💡 Tip: Barcode scanner se direct scan karein ya product ka naam likh kar Enter dabayein, khud ba khud add ho jayegi!</span>
+                    {lastAddedProduct && (
+                      <span className="text-emerald-700 font-bold animate-pulse">
+                        ✓ Added: {lastAddedProduct}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   {items.map((item, idx) => (
                     <div key={idx} className="flex gap-2 items-center">
-                      <select
-                        required
+                      <SearchableProductSelect
+                        products={products}
                         value={item.product_id}
-                        onChange={(e) => handleProductSelect(idx, e.target.value)}
-                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg bg-white"
-                      >
-                        <option value="">-- Select Product --</option>
-                        {products.map(p => (
-                          <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
-                        ))}
-                      </select>
+                        onChange={(prodId) => handleProductSelect(idx, prodId)}
+                        placeholder="-- Search by Name, Barcode, or Code --"
+                      />
 
                       <input
                         type="number"
