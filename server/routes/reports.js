@@ -13,21 +13,25 @@ router.get('/dashboard', authenticate, (req, res) => {
   let dateCondition = `(date(s.created_at, '+5 hours') = date('now', '+5 hours') OR date(s.created_at) = date('now'))`;
   let expDateCondition = `(date(e.date) = date('now', '+5 hours') OR date(e.date) = date('now'))`;
   let purDateCondition = `(date(p.created_at, '+5 hours') = date('now', '+5 hours') OR date(p.created_at) = date('now'))`;
+  let retDateCondition = `(date(sr.created_at, '+5 hours') = date('now', '+5 hours') OR date(sr.created_at) = date('now'))`;
 
   if (date_range === '7days') {
     dateCondition = `s.created_at >= datetime('now', '-7 days')`;
     expDateCondition = `e.date >= date('now', '-7 days')`;
     purDateCondition = `p.created_at >= datetime('now', '-7 days')`;
+    retDateCondition = `sr.created_at >= datetime('now', '-7 days')`;
   } else if (date_range === 'month') {
     dateCondition = `(strftime('%Y-%m', s.created_at, '+5 hours') = strftime('%Y-%m', 'now', '+5 hours') OR strftime('%Y-%m', s.created_at) = strftime('%Y-%m', 'now'))`;
     expDateCondition = `(strftime('%Y-%m', e.date) = strftime('%Y-%m', 'now', '+5 hours') OR strftime('%Y-%m', e.date) = strftime('%Y-%m', 'now'))`;
     purDateCondition = `(strftime('%Y-%m', p.created_at, '+5 hours') = strftime('%Y-%m', 'now', '+5 hours') OR strftime('%Y-%m', p.created_at) = strftime('%Y-%m', 'now'))`;
+    retDateCondition = `(strftime('%Y-%m', sr.created_at, '+5 hours') = strftime('%Y-%m', 'now', '+5 hours') OR strftime('%Y-%m', sr.created_at) = strftime('%Y-%m', 'now'))`;
   }
 
   // Branch conditions
   const branchSalesCond = branchId ? `AND s.branch_id = ${branchId}` : '';
   const branchExpCond = branchId ? `AND e.branch_id = ${branchId}` : '';
   const branchPurCond = branchId ? `AND p.branch_id = ${branchId}` : '';
+  const branchRetCond = branchId ? `AND sr.branch_id = ${branchId}` : '';
 
   // KPI calculations
   const salesKpi = db.prepare(`
@@ -38,6 +42,33 @@ router.get('/dashboard', authenticate, (req, res) => {
     FROM sales s
     WHERE ${dateCondition} ${branchSalesCond} AND s.status != 'cancelled'
   `).get();
+
+  const retKpi = db.prepare(`
+    SELECT
+      COALESCE(SUM(sr.refund_amount), 0) as total_returns,
+      COUNT(sr.id) as total_returns_count
+    FROM sales_returns sr
+    WHERE ${retDateCondition} ${branchRetCond}
+  `).get();
+
+  const retProfitKpi = db.prepare(`
+    SELECT
+      COALESCE(SUM(sri.refund_total - (sri.quantity * COALESCE(si.purchase_price, 0))), 0) as returned_profit
+    FROM sales_return_items sri
+    JOIN sales_returns sr ON sri.return_id = sr.id
+    LEFT JOIN sale_items si ON sri.sale_item_id = si.id
+    WHERE ${retDateCondition} ${branchRetCond}
+  `).get();
+
+  const returnedInvoicesCount = db.prepare(`
+    SELECT COUNT(s.id) as count
+    FROM sales s
+    WHERE ${dateCondition} ${branchSalesCond} AND s.status = 'returned'
+  `).get().count;
+
+  const netSales = Math.max(0, salesKpi.total_sales - retKpi.total_returns);
+  const netGrossProfit = Math.max(0, salesKpi.total_profit - retProfitKpi.returned_profit);
+  const activeInvoices = Math.max(0, salesKpi.total_invoices - returnedInvoicesCount);
 
   const expKpi = db.prepare(`
     SELECT COALESCE(SUM(e.amount), 0) as total_expenses
@@ -82,45 +113,111 @@ router.get('/dashboard', authenticate, (req, res) => {
   const totalCustomerCredit = db.prepare("SELECT COALESCE(SUM(current_balance), 0) as credit FROM customers WHERE status = 'active'").get().credit;
   const totalSupplierPayable = db.prepare("SELECT COALESCE(SUM(current_balance), 0) as payable FROM suppliers WHERE status = 'active'").get().payable;
 
-  // Multi-branch comparison
-  const branchComparison = db.prepare(`
-    SELECT b.id, b.name, b.code,
-           COALESCE(SUM(s.grand_total), 0) as sales_amount,
-           COUNT(s.id) as invoice_count,
-           COALESCE(SUM(s.profit), 0) as profit_amount
-    FROM branches b
-    LEFT JOIN sales s ON s.branch_id = b.id AND ${dateCondition} AND s.status != 'cancelled'
-    WHERE b.status = 'active'
-    GROUP BY b.id
-    ORDER BY b.id ASC
-  `).all();
+  // Multi-branch comparison (deducting branch returns)
+  const branches = db.prepare("SELECT id, name, code FROM branches WHERE status = 'active' ORDER BY id ASC").all();
+  const branchComparison = branches.map(b => {
+    const sRow = db.prepare(`
+      SELECT
+        COALESCE(SUM(s.grand_total), 0) as sales_amount,
+        COUNT(s.id) as invoice_count,
+        COALESCE(SUM(s.profit), 0) as profit_amount
+      FROM sales s
+      WHERE s.branch_id = ? AND ${dateCondition} AND s.status != 'cancelled'
+    `).get(b.id);
 
-  // Payment methods breakdown
-  const paymentMethods = db.prepare(`
-    SELECT s.payment_method, COUNT(*) as count, COALESCE(SUM(s.grand_total), 0) as total
+    const rRow = db.prepare(`
+      SELECT
+        COALESCE(SUM(sr.refund_amount), 0) as ret_amount,
+        COALESCE(SUM(sri.refund_total - (sri.quantity * COALESCE(si.purchase_price, 0))), 0) as ret_profit
+      FROM sales_returns sr
+      LEFT JOIN sales_return_items sri ON sri.return_id = sr.id
+      LEFT JOIN sale_items si ON sri.sale_item_id = si.id
+      WHERE sr.branch_id = ? AND ${retDateCondition}
+    `).get(b.id);
+
+    return {
+      id: b.id,
+      name: b.name,
+      code: b.code,
+      sales_amount: Math.max(0, sRow.sales_amount - rRow.ret_amount),
+      invoice_count: sRow.invoice_count,
+      profit_amount: Math.max(0, sRow.profit_amount - rRow.ret_profit)
+    };
+  });
+
+  // Payment methods breakdown (deducting refunds by payment method)
+  const rawPaymentMethods = db.prepare(`
+    SELECT s.payment_method, COUNT(s.id) as count, COALESCE(SUM(s.grand_total), 0) as total
     FROM sales s
     WHERE ${dateCondition} ${branchSalesCond} AND s.status != 'cancelled'
     GROUP BY s.payment_method
   `).all();
 
-  // Top selling products
+  const rawRefundMethods = db.prepare(`
+    SELECT sr.refund_method as payment_method, COALESCE(SUM(sr.refund_amount), 0) as refund_total
+    FROM sales_returns sr
+    WHERE ${retDateCondition} ${branchRetCond}
+    GROUP BY sr.refund_method
+  `).all();
+
+  const refundMap = {};
+  rawRefundMethods.forEach(r => { refundMap[r.payment_method] = (refundMap[r.payment_method] || 0) + r.refund_total; });
+
+  const paymentMethods = rawPaymentMethods.map(pm => {
+    const refunded = refundMap[pm.payment_method] || 0;
+    return {
+      payment_method: pm.payment_method,
+      count: pm.count,
+      total: Math.max(0, pm.total - refunded)
+    };
+  }).filter(pm => pm.total > 0 || pm.count > 0);
+
+  // Top selling products (deducting returned quantities and excluding fully returned items)
   const topProducts = db.prepare(`
-    SELECT si.product_name, si.unit, SUM(si.quantity) as total_qty, SUM(si.line_total) as total_revenue
+    SELECT
+      si.product_name,
+      si.unit,
+      SUM(si.quantity - COALESCE(si.returned_quantity, 0)) as total_qty,
+      SUM(
+        CASE
+          WHEN si.quantity > 0 THEN
+            (si.line_total / si.quantity) * (si.quantity - COALESCE(si.returned_quantity, 0))
+          ELSE 0
+        END
+      ) as total_revenue
     FROM sale_items si
     JOIN sales s ON si.sale_id = s.id
     WHERE ${dateCondition} ${branchSalesCond} AND s.status != 'cancelled'
     GROUP BY si.product_id
+    HAVING total_qty > 0
     ORDER BY total_revenue DESC
     LIMIT 6
   `).all();
 
-  // Recent 7 Days Sales Trend
+  // Recent 7 Days Sales Trend (daily sales - daily returns)
   const salesTrend = db.prepare(`
-    SELECT date(created_at) as sale_date, COALESCE(SUM(grand_total), 0) as total, COUNT(id) as count
-    FROM sales
-    WHERE created_at >= datetime('now', '-7 days') ${branchId ? `AND branch_id = ${branchId}` : ''} AND status != 'cancelled'
-    GROUP BY date(created_at)
-    ORDER BY sale_date ASC
+    SELECT
+      d.sale_date,
+      MAX(0, COALESCE(s.daily_sales, 0) - COALESCE(r.daily_returns, 0)) as total,
+      COALESCE(s.daily_count, 0) as count
+    FROM (
+      SELECT date(created_at) as sale_date FROM sales WHERE created_at >= datetime('now', '-7 days')
+      UNION
+      SELECT date(created_at) as sale_date FROM sales_returns WHERE created_at >= datetime('now', '-7 days')
+    ) d
+    LEFT JOIN (
+      SELECT date(created_at) as s_date, SUM(grand_total) as daily_sales, COUNT(id) as daily_count
+      FROM sales
+      WHERE created_at >= datetime('now', '-7 days') ${branchId ? `AND branch_id = ${branchId}` : ''} AND status != 'cancelled'
+      GROUP BY date(created_at)
+    ) s ON d.sale_date = s.s_date
+    LEFT JOIN (
+      SELECT date(created_at) as r_date, SUM(refund_amount) as daily_returns
+      FROM sales_returns
+      WHERE created_at >= datetime('now', '-7 days') ${branchId ? `AND branch_id = ${branchId}` : ''}
+      GROUP BY date(created_at)
+    ) r ON d.sale_date = r.r_date
+    ORDER BY d.sale_date ASC
   `).all();
 
   // Critical Low Stock Alerts preview
@@ -137,12 +234,17 @@ router.get('/dashboard', authenticate, (req, res) => {
 
   res.json({
     kpis: {
-      total_sales: salesKpi.total_sales,
-      total_profit: req.user.role === 'cashier' ? 0 : salesKpi.total_profit,
+      total_sales: netSales,
+      gross_sales: salesKpi.total_sales,
+      total_returns: retKpi.total_returns,
+      total_returns_count: retKpi.total_returns_count,
+      total_profit: req.user.role === 'cashier' ? 0 : netGrossProfit,
       total_invoices: salesKpi.total_invoices,
+      active_invoices: activeInvoices,
+      returned_invoices: returnedInvoicesCount,
       total_expenses: expKpi.total_expenses,
       total_purchases: purKpi.total_purchases,
-      net_profit: req.user.role === 'cashier' ? 0 : (salesKpi.total_profit - expKpi.total_expenses),
+      net_profit: req.user.role === 'cashier' ? 0 : (netGrossProfit - expKpi.total_expenses),
       cash_in_hand: openCash,
       total_products: totalProducts,
       low_stock_count: lowStockCount,
@@ -203,6 +305,18 @@ router.get('/data', authenticate, requirePermission('view_reports'), (req, res) 
     }
 
     case 'profit_loss': {
+      const retDateClause = date_from && date_to ? `AND date(sr.created_at) BETWEEN date('${date_from}') AND date('${date_to}')` : (date_from ? `AND date(sr.created_at) >= date('${date_from}')` : (date_to ? `AND date(sr.created_at) <= date('${date_to}')` : ''));
+      const retBranchClause = branchId ? `AND sr.branch_id = ${branchId}` : '';
+
+      const retTotal = db.prepare(`
+        SELECT COALESCE(SUM(sr.refund_amount), 0) as total_refund,
+               COALESCE(SUM(sri.refund_total - (sri.quantity * COALESCE(si.purchase_price, 0))), 0) as profit_refund
+        FROM sales_returns sr
+        LEFT JOIN sales_return_items sri ON sri.return_id = sr.id
+        LEFT JOIN sale_items si ON sri.sale_item_id = si.id
+        WHERE 1=1 ${retBranchClause} ${retDateClause}
+      `).get();
+
       const salesTotal = db.prepare(`
         SELECT COALESCE(SUM(grand_total), 0) as sales,
                COALESCE(SUM(total_cost), 0) as cogs,
@@ -216,13 +330,18 @@ router.get('/data', authenticate, requirePermission('view_reports'), (req, res) 
         FROM expenses WHERE 1=1 ${branchClause} ${expDateClause}
       `).get().expenses;
 
+      const netSales = Math.max(0, salesTotal.sales - retTotal.total_refund);
+      const netGrossProfit = Math.max(0, salesTotal.gross_profit - retTotal.profit_refund);
+
       summary = {
         gross_sales: salesTotal.sales,
+        returns_amount: retTotal.total_refund,
+        net_sales: netSales,
         cost_of_goods_sold: salesTotal.cogs,
-        gross_profit: salesTotal.gross_profit,
+        gross_profit: netGrossProfit,
         total_expenses: expTotal,
-        net_profit: salesTotal.gross_profit - expTotal,
-        profit_margin: salesTotal.sales > 0 ? (((salesTotal.gross_profit - expTotal) / salesTotal.sales) * 100).toFixed(1) : '0'
+        net_profit: netGrossProfit - expTotal,
+        profit_margin: netSales > 0 ? (((netGrossProfit - expTotal) / netSales) * 100).toFixed(1) : '0'
       };
 
       results = db.prepare(`
@@ -288,16 +407,30 @@ router.get('/data', authenticate, requirePermission('view_reports'), (req, res) 
     case 'product_sales': {
       results = db.prepare(`
         SELECT p.code, si.product_name, p.unit, c.name as category,
-               SUM(si.quantity) as total_sold,
-               SUM(si.line_total) as total_revenue,
-               SUM(si.quantity * si.purchase_price) as total_cost,
-               SUM(si.line_total - (si.quantity * si.purchase_price)) as gross_profit
+               SUM(si.quantity - COALESCE(si.returned_quantity, 0)) as total_sold,
+               SUM(
+                 CASE
+                   WHEN si.quantity > 0 THEN
+                     (si.line_total / si.quantity) * (si.quantity - COALESCE(si.returned_quantity, 0))
+                   ELSE 0
+                 END
+               ) as total_revenue,
+               SUM((si.quantity - COALESCE(si.returned_quantity, 0)) * si.purchase_price) as total_cost,
+               SUM(
+                 CASE
+                   WHEN si.quantity > 0 THEN
+                     ((si.line_total / si.quantity) * (si.quantity - COALESCE(si.returned_quantity, 0))) -
+                     ((si.quantity - COALESCE(si.returned_quantity, 0)) * si.purchase_price)
+                   ELSE 0
+                 END
+               ) as gross_profit
         FROM sale_items si
         JOIN sales s ON si.sale_id = s.id
         JOIN products p ON si.product_id = p.id
         LEFT JOIN categories c ON p.category_id = c.id
         WHERE s.status != 'cancelled' ${branchClause.replace(/branch_id/g, 's.branch_id')} ${dateClause.replace(/created_at/g, 's.created_at')}
         GROUP BY si.product_id
+        HAVING total_sold > 0
         ORDER BY total_revenue DESC
       `).all();
       break;

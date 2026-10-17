@@ -161,9 +161,14 @@ export function DashboardPage({ onNavigate }) {
             <h3 className="text-2xl font-black text-slate-900 tracking-tight">
               Rs. {Number(kpis.total_sales || 0).toLocaleString()}
             </h3>
-            <p className="text-xs text-slate-500 font-semibold mt-1">
-              {kpis.total_invoices || 0} Invoices generated
-            </p>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 font-semibold mt-1">
+              <span>{kpis.active_invoices !== undefined ? kpis.active_invoices : (kpis.total_invoices || 0)} Invoices</span>
+              {kpis.total_returns > 0 && (
+                <span className="bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded text-[11px] font-bold">
+                  -{Number(kpis.total_returns).toLocaleString()} {lang === 'ur' ? 'واپسی' : 'returned'}
+                </span>
+              )}
+            </div>
           </div>
           <div className="absolute -bottom-1 -right-1 w-16 h-16 bg-amber-50 rounded-full -z-0 opacity-50 pointer-events-none" />
         </div>

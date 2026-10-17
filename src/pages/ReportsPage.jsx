@@ -169,8 +169,11 @@ export function ReportsPage() {
       {reportType === 'profit_loss' && summary.gross_sales !== undefined && (
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-lg border border-slate-700 grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs">
           <div>
-            <span className="text-slate-400 font-bold uppercase">1. Gross Revenue</span>
-            <p className="text-xl font-black text-amber-400 mt-1">Rs. {Number(summary.gross_sales).toLocaleString()}</p>
+            <span className="text-slate-400 font-bold uppercase">{summary.returns_amount > 0 ? '1. Net Revenue' : '1. Gross Revenue'}</span>
+            <p className="text-xl font-black text-amber-400 mt-1">Rs. {Number(summary.net_sales !== undefined ? summary.net_sales : summary.gross_sales).toLocaleString()}</p>
+            {summary.returns_amount > 0 && (
+              <span className="text-[10px] text-rose-400 font-semibold block mt-0.5">(Ret: -Rs. {Number(summary.returns_amount).toLocaleString()})</span>
+            )}
           </div>
           <div>
             <span className="text-slate-400 font-bold uppercase">2. Cost of Goods (COGS)</span>
