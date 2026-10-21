@@ -108,7 +108,7 @@ router.post('/', authenticate, requirePermission('manage_products'), (req, res) 
     name, name_urdu, code, sku, barcode, category_id, brand,
     purchase_price = 0, sale_price = 0, wholesale_price = 0,
     min_stock = 0, unit = 'Piece', supplier_id, expiry_date, image_url, description,
-    initial_stock = 0
+    initial_stock = 0, stock, branch_id
   } = req.body;
 
   if (!name || !sale_price) {
@@ -216,11 +216,16 @@ router.post('/', authenticate, requirePermission('manage_products'), (req, res) 
       VALUES (?, ?, 'manual_adjustment', ?, 0, ?, 'NEW-PRODUCT', 'Initial Product Stock', ?)
     `);
 
+    const stockToSet = stock !== undefined && stock !== null && stock !== ''
+      ? Math.max(0, Number(stock))
+      : Math.max(0, Number(initial_stock || 0));
+    const targetBranch = Number(branch_id || req.user?.branch_id || 1);
+
     for (const b of branches) {
-      const stock = (b.id === Number(req.user.branch_id || 1)) ? Number(initial_stock || 0) : 0;
-      insertInv.run(b.id, newProdId, stock);
-      if (stock > 0) {
-        insertMov.run(newProdId, b.id, stock, stock, req.user.id);
+      const branchStock = (b.id === targetBranch) ? stockToSet : 0;
+      insertInv.run(b.id, newProdId, branchStock);
+      if (branchStock > 0) {
+        insertMov.run(newProdId, b.id, branchStock, branchStock, req.user?.id || null);
       }
     }
 
@@ -249,7 +254,8 @@ router.put('/:id', authenticate, requirePermission('manage_products'), (req, res
   const {
     name, name_urdu, code, sku, barcode, category_id, brand,
     purchase_price, sale_price, wholesale_price, min_stock, unit,
-    supplier_id, expiry_date, image_url, description, status
+    supplier_id, expiry_date, image_url, description, status,
+    stock, initial_stock, branch_id
   } = req.body;
 
   const prodId = Number(req.params.id);
@@ -384,7 +390,48 @@ router.put('/:id', authenticate, requirePermission('manage_products'), (req, res
       details: `Updated product "${oldProduct.name}"`
     });
 
-    const updated = db.prepare('SELECT * FROM products WHERE id = ?').get(prodId);
+    // Update branch stock if passed
+    const stockInput = stock !== undefined ? stock : initial_stock;
+    const targetBranchId = Number(branch_id || req.user?.branch_id || 1);
+    if (stockInput !== undefined && stockInput !== null && stockInput !== '') {
+      const newStock = Math.max(0, Number(stockInput));
+      const currentInv = db.prepare('SELECT quantity FROM branch_inventory WHERE branch_id = ? AND product_id = ?').get(targetBranchId, prodId);
+      const curStock = currentInv ? currentInv.quantity : 0;
+
+      if (curStock !== newStock) {
+        db.prepare(`
+          INSERT INTO branch_inventory (branch_id, product_id, quantity, last_restocked)
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(branch_id, product_id) DO UPDATE SET quantity = ?, last_restocked = CURRENT_TIMESTAMP
+        `).run(targetBranchId, prodId, newStock, newStock);
+
+        const diff = newStock - curStock;
+        db.prepare(`
+          INSERT INTO stock_movements (product_id, branch_id, type, quantity, previous_stock, new_stock, reference_id, reason, user_id)
+          VALUES (?, ?, 'manual_adjustment', ?, ?, ?, 'PRODUCT-EDIT', 'Stock updated via product edit', ?)
+        `).run(prodId, targetBranchId, diff, curStock, newStock, req.user?.id || null);
+
+        logAudit({
+          userId: req.user?.id,
+          username: req.user?.username,
+          branchId: targetBranchId,
+          action: 'STOCK_ADJUSTMENT',
+          entity: 'INVENTORY',
+          entityId: prodId,
+          details: `Adjusted stock for "${oldProduct.name}" in branch ${targetBranchId}: ${curStock} -> ${newStock} via Product Edit`
+        });
+      }
+    }
+
+    const updated = db.prepare(`
+      SELECT p.*, c.name as category_name, c.name_urdu as category_name_urdu,
+             COALESCE(bi.quantity, 0) as branch_stock
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN branch_inventory bi ON (bi.product_id = p.id AND bi.branch_id = ?)
+      WHERE p.id = ?
+    `).get(targetBranchId, prodId);
+
     res.json({ message: 'Product updated successfully', product: updated });
   } catch (err) {
     res.status(500).json({ error: err.message });

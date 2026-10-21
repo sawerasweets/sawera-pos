@@ -53,7 +53,8 @@ export function ProductsPage() {
     expiry_date: '',
     image_url: '',
     description: '',
-    initial_stock: 20
+    initial_stock: 0,
+    stock: 0
   });
 
   // Barcode Label Modal
@@ -148,7 +149,8 @@ export function ProductsPage() {
       expiry_date: '',
       image_url: 'https://images.unsplash.com/photo-1599785209707-a456fc1337bb?w=200&auto=format&fit=crop&q=60',
       description: '',
-      initial_stock: 0
+      initial_stock: 0,
+      stock: 0
     });
     setShowModal(true);
   };
@@ -160,6 +162,7 @@ export function ProductsPage() {
     // Safeguard: Ensure category and supplier exist in current loaded lists
     const hasCategory = categories.some(c => String(c.id) === String(p.category_id));
     const hasSupplier = suppliers.some(s => String(s.id) === String(p.supplier_id));
+    const currentStock = (p.branch_stock !== undefined && p.branch_stock !== null) ? p.branch_stock : (p.stock || 0);
 
     setFormData({
       name: p.name,
@@ -178,7 +181,9 @@ export function ProductsPage() {
       expiry_date: p.expiry_date || '',
       image_url: p.image_url || '',
       description: p.description || '',
-      status: p.status || 'active'
+      status: p.status || 'active',
+      stock: currentStock,
+      initial_stock: currentStock
     });
     setShowModal(true);
   };
@@ -197,6 +202,9 @@ export function ProductsPage() {
         ? rawBarcode
         : `8964${Date.now().toString().slice(-8)}`;
 
+      const rawStock = formData.stock !== undefined && formData.stock !== '' ? formData.stock : formData.initial_stock;
+      const parsedStock = !isNaN(Number(rawStock)) ? Math.max(0, parseFloat(rawStock)) : 0;
+
       const payload = {
         name: String(formData.name || '').trim(),
         name_urdu: String(formData.name_urdu || '').trim(),
@@ -214,7 +222,9 @@ export function ProductsPage() {
         expiry_date: formData.expiry_date || null,
         image_url: String(formData.image_url || '').trim(),
         description: String(formData.description || '').trim(),
-        initial_stock: parseFloat(formData.initial_stock) || 0,
+        initial_stock: parsedStock,
+        stock: parsedStock,
+        branch_id: activeBranchId || 1,
         status: formData.status || 'active'
       };
 
@@ -580,6 +590,39 @@ export function ProductsPage() {
                   />
                 </div>
 
+                {/* Stock Quantity (Available in both Add & Edit) */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 flex items-center justify-between">
+                    <span>
+                      {editId
+                        ? (lang === 'ur' ? 'اسٹاک کی تعداد (Stock Quantity)' : 'Stock Quantity')
+                        : (lang === 'ur' ? 'ابتدائی اسٹاک (Initial Stock)' : 'Initial Stock in Branch')}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      {editId ? (lang === 'ur' ? 'موجودہ اسٹاک' : 'Current Stock') : (lang === 'ur' ? 'نیا اسٹاک' : 'Opening')}
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={formData.stock !== undefined ? formData.stock : formData.initial_stock}
+                      onChange={(e) => setFormData({ ...formData, stock: e.target.value, initial_stock: e.target.value })}
+                      className="w-full px-3 py-2 border-2 border-emerald-400 bg-emerald-50/30 rounded-lg font-bold text-emerald-800 text-base focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none transition"
+                      placeholder="0"
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs font-extrabold text-emerald-700 pointer-events-none">
+                      {formData.unit || 'Piece'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1 font-medium">
+                    {editId
+                      ? (lang === 'ur' ? 'یہاں سے اسٹاک کی تعداد باآسانی تبدیل کریں۔' : 'Change stock quantity directly from here.')
+                      : (lang === 'ur' ? 'برانچ کے لیے اسٹاک کی تعداد درج کریں۔' : 'Enter stock quantity for active branch.')}
+                  </p>
+                </div>
+
                 {/* Minimum Stock Alert Level */}
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
@@ -598,8 +641,8 @@ export function ProductsPage() {
                   </p>
                 </div>
 
-                {/* Supplier */}
-                <div>
+                {/* Preferred Supplier */}
+                <div className="md:col-span-2">
                   <label className="block font-bold text-slate-700 mb-1">Preferred Supplier</label>
                   <select
                     value={formData.supplier_id}
@@ -612,18 +655,6 @@ export function ProductsPage() {
                     ))}
                   </select>
                 </div>
-
-                {!editId && (
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Initial Opening Stock in Branch</label>
-                    <input
-                      type="number"
-                      value={formData.initial_stock}
-                      onChange={(e) => setFormData({ ...formData, initial_stock: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg font-bold text-emerald-700"
-                    />
-                  </div>
-                )}
 
               </div>
 
