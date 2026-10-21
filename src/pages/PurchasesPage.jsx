@@ -419,10 +419,7 @@ export function PurchasesPage() {
           </div>
 
           <button
-            onClick={() => {
-              setShowModal(true);
-              setTimeout(() => quickScanRef.current?.focus(), 150);
-            }}
+            onClick={() => setShowModal(true)}
             className="flex items-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4" />
@@ -557,80 +554,6 @@ export function PurchasesPage() {
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add Empty Row</span>
                   </button>
-                </div>
-
-                {/* Quick Barcode Scanner & Search Bar */}
-                <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-2.5">
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-amber-700">
-                      <Barcode className="w-5 h-5" />
-                    </div>
-                    <input
-                      type="text"
-                      ref={quickScanRef}
-                      value={quickScanQuery}
-                      onChange={(e) => setQuickScanQuery(e.target.value)}
-                      onKeyDown={handleQuickScanKeyDown}
-                      placeholder="⚡ Barcode scan karein ya Product ka Name / Code / Barcode likh kar Enter dabayein..."
-                      className="w-full pl-10 pr-8 py-2 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-inner"
-                    />
-                    {quickScanQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setQuickScanQuery('')}
-                        className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-
-                    {/* Live search suggestions popup for quick add */}
-                    {quickScanQuery.trim() && (
-                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
-                        {quickSearchResults.length > 0 ? (
-                          quickSearchResults.map(p => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => {
-                                addProductToItems(p);
-                                setQuickScanQuery('');
-                              }}
-                              className="w-full text-left px-3.5 py-2.5 hover:bg-amber-50 transition flex items-center justify-between gap-3"
-                            >
-                              <div>
-                                <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                                  <span>{p.name}</span>
-                                  {p.name_urdu && <span className="text-[10px] text-slate-400 font-urdu">{p.name_urdu}</span>}
-                                </div>
-                                <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
-                                  {p.barcode && <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono font-semibold">Barcode: {p.barcode}</span>}
-                                  {p.code && <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">Code: {p.code}</span>}
-                                  <span className="text-emerald-700 font-bold">Current Stock: {p.branch_stock || 0} {p.unit}</span>
-                                </div>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <span className="text-xs font-black text-amber-700">Cost: Rs. {p.purchase_price || 0}</span>
-                                <span className="block text-[10px] font-bold text-emerald-700">+ Click to Add</span>
-                              </div>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="p-3 text-center text-xs text-slate-500 font-medium">
-                            Koi product nahi mili ("{quickScanQuery}")
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-amber-800 font-medium mt-1 px-1">
-                    <span>💡 Tip: Barcode scanner se direct scan karein ya product ka naam likh kar Enter dabayein, khud ba khud add ho jayegi!</span>
-                    {lastAddedProduct && (
-                      <span className="text-emerald-700 font-bold animate-pulse">
-                        ✓ Added: {lastAddedProduct}
-                      </span>
-                    )}
-                  </div>
                 </div>
 
                 <div className="space-y-2">
