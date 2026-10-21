@@ -156,20 +156,25 @@ export function ProductsPage() {
   const openEditModal = (p) => {
     setEditId(p.id);
     setFormError('');
+
+    // Safeguard: Ensure category and supplier exist in current loaded lists
+    const hasCategory = categories.some(c => String(c.id) === String(p.category_id));
+    const hasSupplier = suppliers.some(s => String(s.id) === String(p.supplier_id));
+
     setFormData({
       name: p.name,
       name_urdu: p.name_urdu || '',
       code: p.code,
       sku: p.sku || '',
       barcode: p.barcode || '',
-      category_id: p.category_id || '',
+      category_id: hasCategory ? p.category_id : '',
       brand: p.brand || '',
       purchase_price: p.purchase_price,
       sale_price: p.sale_price,
       wholesale_price: p.wholesale_price || 0,
       min_stock: p.min_stock,
       unit: p.unit || 'Piece',
-      supplier_id: p.supplier_id || '',
+      supplier_id: hasSupplier ? p.supplier_id : '',
       expiry_date: p.expiry_date || '',
       image_url: p.image_url || '',
       description: p.description || '',

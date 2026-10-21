@@ -120,6 +120,17 @@ export async function initTursoSync() {
 
       db.exec('COMMIT;');
       db.exec('PRAGMA foreign_keys = ON;');
+
+      // Safeguard: Clean up any orphaned foreign keys in restored products table
+      try {
+        db.exec(`
+          UPDATE products SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND supplier_id NOT IN (SELECT id FROM suppliers);
+          UPDATE products SET category_id = NULL WHERE category_id IS NOT NULL AND category_id NOT IN (SELECT id FROM categories);
+        `);
+      } catch (cleanErr) {
+        console.warn('[Turso Cloud] Foreign key integrity cleanup:', cleanErr.message);
+      }
+
       console.log(`[Turso Cloud] Successfully restored ${restoredCount} tables from Turso Cloud!`);
     } else {
       console.log('[Turso Cloud] Cloud storage is clean/empty. Pushing current base configurations to cloud...');

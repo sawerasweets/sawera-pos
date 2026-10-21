@@ -169,6 +169,18 @@ router.post('/', authenticate, requirePermission('manage_products'), (req, res) 
     console.warn('[Products] Notice while releasing inactive barcodes:', cleanErr.message);
   }
 
+  let safeCategoryId = null;
+  if (category_id && Number(category_id) > 0) {
+    const cat = db.prepare('SELECT id FROM categories WHERE id = ?').get(Number(category_id));
+    if (cat) safeCategoryId = cat.id;
+  }
+
+  let safeSupplierId = null;
+  if (supplier_id && Number(supplier_id) > 0) {
+    const sup = db.prepare('SELECT id FROM suppliers WHERE id = ?').get(Number(supplier_id));
+    if (sup) safeSupplierId = sup.id;
+  }
+
   try {
     const stmt = db.prepare(`
       INSERT INTO products (name, name_urdu, code, sku, barcode, category_id, brand, purchase_price, sale_price, wholesale_price, min_stock, unit, supplier_id, expiry_date, image_url, description, status)
@@ -181,14 +193,14 @@ router.post('/', authenticate, requirePermission('manage_products'), (req, res) 
       generatedCode,
       sku ? sku.trim() : generatedCode,
       generatedBarcode,
-      category_id ? Number(category_id) : null,
+      safeCategoryId,
       brand || 'Sawera Sweets',
       Number(purchase_price),
       Number(sale_price),
       Number(wholesale_price),
       Number(min_stock),
       unit || 'Piece',
-      supplier_id ? Number(supplier_id) : null,
+      safeSupplierId,
       expiry_date || null,
       image_url || 'https://images.unsplash.com/photo-1599785209707-a456fc1337bb?w=200&auto=format&fit=crop&q=60',
       description || null
@@ -286,6 +298,26 @@ router.put('/:id', authenticate, requirePermission('manage_products'), (req, res
     } catch (_) {}
   }
 
+  // Validate category_id (safeguard against non-existent category foreign key)
+  let safeCategoryId = null;
+  if (category_id !== undefined && category_id !== null && category_id !== '' && Number(category_id) > 0) {
+    const cat = db.prepare('SELECT id FROM categories WHERE id = ?').get(Number(category_id));
+    safeCategoryId = cat ? cat.id : null;
+  } else if (category_id === undefined && oldProduct.category_id) {
+    const cat = db.prepare('SELECT id FROM categories WHERE id = ?').get(oldProduct.category_id);
+    safeCategoryId = cat ? cat.id : null;
+  }
+
+  // Validate supplier_id (safeguard against deleted/non-existent supplier foreign key)
+  let safeSupplierId = null;
+  if (supplier_id !== undefined && supplier_id !== null && supplier_id !== '' && Number(supplier_id) > 0) {
+    const sup = db.prepare('SELECT id FROM suppliers WHERE id = ?').get(Number(supplier_id));
+    safeSupplierId = sup ? sup.id : null;
+  } else if (supplier_id === undefined && oldProduct.supplier_id) {
+    const sup = db.prepare('SELECT id FROM suppliers WHERE id = ?').get(oldProduct.supplier_id);
+    safeSupplierId = sup ? sup.id : null;
+  }
+
   try {
     db.prepare(`
       UPDATE products
@@ -294,14 +326,14 @@ router.put('/:id', authenticate, requirePermission('manage_products'), (req, res
           code = COALESCE(?, code),
           sku = COALESCE(?, sku),
           barcode = COALESCE(?, barcode),
-          category_id = COALESCE(?, category_id),
+          category_id = ?,
           brand = COALESCE(?, brand),
           purchase_price = COALESCE(?, purchase_price),
           sale_price = COALESCE(?, sale_price),
           wholesale_price = COALESCE(?, wholesale_price),
           min_stock = COALESCE(?, min_stock),
           unit = COALESCE(?, unit),
-          supplier_id = COALESCE(?, supplier_id),
+          supplier_id = ?,
           expiry_date = COALESCE(?, expiry_date),
           image_url = COALESCE(?, image_url),
           description = COALESCE(?, description),
@@ -314,14 +346,14 @@ router.put('/:id', authenticate, requirePermission('manage_products'), (req, res
       code !== undefined && code !== null ? String(code).trim() : null,
       sku !== undefined && sku !== null ? String(sku).trim() : null,
       barcode !== undefined && barcode !== null ? String(barcode).trim() : null,
-      category_id !== undefined && category_id !== null && category_id !== '' ? Number(category_id) : null,
+      safeCategoryId,
       brand !== undefined && brand !== null ? String(brand).trim() : null,
       purchase_price !== undefined && purchase_price !== null && purchase_price !== '' ? Number(purchase_price) : null,
       sale_price !== undefined && sale_price !== null && sale_price !== '' ? Number(sale_price) : null,
       wholesale_price !== undefined && wholesale_price !== null && wholesale_price !== '' ? Number(wholesale_price) : null,
       min_stock !== undefined && min_stock !== null && min_stock !== '' ? Number(min_stock) : null,
       unit !== undefined && unit !== null ? String(unit).trim() : null,
-      supplier_id !== undefined && supplier_id !== null && supplier_id !== '' ? Number(supplier_id) : null,
+      safeSupplierId,
       expiry_date !== undefined && expiry_date !== null && expiry_date !== '' ? expiry_date : null,
       image_url !== undefined && image_url !== null ? image_url : null,
       description !== undefined && description !== null ? description : null,

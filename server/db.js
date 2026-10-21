@@ -571,6 +571,14 @@ export function initDatabase() {
   addCol('quotation_items', 'weight_grams', "REAL");
   addCol('quotation_items', 'rate_per_kg', "REAL");
 
+  // Safeguard: Clean up any orphaned foreign keys in products table
+  try {
+    db.exec(`
+      UPDATE products SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND supplier_id NOT IN (SELECT id FROM suppliers);
+      UPDATE products SET category_id = NULL WHERE category_id IS NOT NULL AND category_id NOT IN (SELECT id FROM categories);
+    `);
+  } catch (_) {}
+
   // Seed default settings and records if empty
   seedInitialData();
   seedProductionAndRecipes();

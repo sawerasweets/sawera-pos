@@ -201,6 +201,7 @@ router.delete('/:id', authenticate, requirePermission('manage_suppliers'), (req,
 
   try {
     db.exec('PRAGMA foreign_keys = OFF;');
+    db.prepare('UPDATE products SET supplier_id = NULL WHERE supplier_id = ?').run(supId);
     db.prepare('DELETE FROM supplier_payments WHERE supplier_id = ?').run(supId);
     db.prepare('DELETE FROM purchase_items WHERE purchase_id IN (SELECT id FROM purchases WHERE supplier_id = ?)').run(supId);
     db.prepare('DELETE FROM purchases WHERE supplier_id = ?').run(supId);
@@ -227,6 +228,7 @@ router.delete('/:id', authenticate, requirePermission('manage_suppliers'), (req,
 router.post('/clear-all-suppliers', authenticate, requirePermission('manage_suppliers'), (req, res) => {
   try {
     db.exec('PRAGMA foreign_keys = OFF;');
+    db.exec('UPDATE products SET supplier_id = NULL;');
     db.exec('DELETE FROM supplier_payments;');
     db.exec('DELETE FROM purchase_items WHERE purchase_id IN (SELECT id FROM purchases);');
     db.exec('DELETE FROM purchases;');
