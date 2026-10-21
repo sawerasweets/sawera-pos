@@ -27,6 +27,7 @@ import wasteRoutes from './routes/waste.js';
 import stockAuditRoutes from './routes/stockAudit.js';
 import quotationRoutes from './routes/quotations.js';
 import promotionRoutes from './routes/promotions.js';
+import khataRoutes from './routes/khata.js';
 import { initTursoSync, triggerCloudSync, flushCloudSyncNow } from './tursoSync.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -85,6 +86,7 @@ app.use('/api/waste', wasteRoutes);
 app.use('/api/stock-audit', stockAuditRoutes);
 app.use('/api/quotations', quotationRoutes);
 app.use('/api/promotions', promotionRoutes);
+app.use('/api/khata', khataRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -19,7 +19,8 @@ import {
   Sparkles,
   ChefHat,
   Trash2,
-  ClipboardCheck
+  ClipboardCheck,
+  BookOpen
 } from 'lucide-react';
 
 export function Sidebar({ currentTab, onSelectTab }) {
@@ -80,6 +81,12 @@ export function Sidebar({ currentTab, onSelectTab }) {
       label: t('nav_customers'),
       icon: Users,
       allowed: hasPermission('pos_access') || hasPermission('manage_customers')
+    },
+    {
+      id: 'khata',
+      label: t('nav_khata'),
+      icon: BookOpen,
+      allowed: user?.role === 'admin' || user?.role === 'manager' || hasPermission('manage_customers')
     },
     {
       id: 'suppliers',

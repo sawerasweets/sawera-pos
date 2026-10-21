@@ -9,6 +9,7 @@ import { ProductsPage } from './pages/ProductsPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { PurchasesPage } from './pages/PurchasesPage';
 import { CustomersPage } from './pages/CustomersPage';
+import { KhataPage } from './pages/KhataPage';
 import { SuppliersPage } from './pages/SuppliersPage';
 import { ExpensesPage } from './pages/ExpensesPage';
 import { SalesHistoryPage } from './pages/SalesHistoryPage';
@@ -63,6 +64,8 @@ function MainApp() {
         return <PurchasesPage />;
       case 'customers':
         return <CustomersPage />;
+      case 'khata':
+        return <KhataPage />;
       case 'suppliers':
         return <SuppliersPage />;
       case 'expenses':

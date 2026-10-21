@@ -446,6 +446,39 @@ export function initDatabase() {
       reason TEXT
     );
 
+    -- General Khata Accounts (Loan / Borrow / Lend Book - Dena / Lena)
+    CREATE TABLE IF NOT EXISTS khata_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      phone TEXT,
+      type TEXT NOT NULL DEFAULT 'payable', -- 'payable' (پیسے دینے ہیں / Dena), 'receivable' (پیسے لینے ہیں / Lena)
+      opening_balance REAL DEFAULT 0,
+      current_balance REAL DEFAULT 0,
+      total_paid REAL DEFAULT 0,
+      total_received REAL DEFAULT 0,
+      notes TEXT,
+      status TEXT DEFAULT 'active', -- 'active', 'settled', 'archived'
+      branch_id INTEGER REFERENCES branches(id) ON DELETE SET NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Khata Ledger Entries (Payments / Transactions / Installments)
+    CREATE TABLE IF NOT EXISTS khata_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id INTEGER NOT NULL REFERENCES khata_accounts(id) ON DELETE CASCADE,
+      entry_type TEXT NOT NULL, -- 'payment' (adayeegi / wusooli), 'addition' (mazeed raqam li / di), 'opening'
+      amount REAL NOT NULL,
+      payment_method TEXT DEFAULT 'cash', -- 'cash', 'bank', 'jazzcash', 'easypaisa', 'cheque'
+      reference_no TEXT,
+      notes TEXT,
+      balance_after REAL NOT NULL,
+      entry_date DATE DEFAULT (date('now')),
+      user_id INTEGER REFERENCES users(id),
+      branch_id INTEGER REFERENCES branches(id),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Quotations / Estimates
     CREATE TABLE IF NOT EXISTS quotations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -541,6 +574,9 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_stock_movements_prod ON stock_movements(product_id);
     CREATE INDEX IF NOT EXISTS idx_waste_branch ON waste_logs(branch_id);
     CREATE INDEX IF NOT EXISTS idx_recipes_product ON recipes(finished_product_id);
+    CREATE INDEX IF NOT EXISTS idx_khata_type ON khata_accounts(type);
+    CREATE INDEX IF NOT EXISTS idx_khata_status ON khata_accounts(status);
+    CREATE INDEX IF NOT EXISTS idx_khata_entries_account ON khata_entries(account_id);
   `);
 
   // Safe Column Migrations

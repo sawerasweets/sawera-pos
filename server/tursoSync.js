@@ -40,7 +40,9 @@ const SYNC_TABLES = [
   'quotations',
   'quotation_items',
   'promotions',
-  'price_change_requests'
+  'price_change_requests',
+  'khata_accounts',
+  'khata_entries'
 ];
 
 export function getTursoClient() {

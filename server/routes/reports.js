@@ -113,6 +113,15 @@ router.get('/dashboard', authenticate, (req, res) => {
   const totalCustomerCredit = db.prepare("SELECT COALESCE(SUM(current_balance), 0) as credit FROM customers WHERE status = 'active'").get().credit;
   const totalSupplierPayable = db.prepare("SELECT COALESCE(SUM(current_balance), 0) as payable FROM suppliers WHERE status = 'active'").get().payable;
 
+  let totalPayableKhata = 0;
+  try {
+    totalPayableKhata = db.prepare(`
+      SELECT COALESCE(SUM(current_balance), 0) as payable
+      FROM khata_accounts
+      WHERE type = 'payable' AND status = 'active'
+    `).get().payable;
+  } catch (_) {}
+
   // Multi-branch comparison (deducting branch returns)
   const branches = db.prepare("SELECT id, name, code FROM branches WHERE status = 'active' ORDER BY id ASC").all();
   const branchComparison = branches.map(b => {
@@ -252,7 +261,8 @@ router.get('/dashboard', authenticate, (req, res) => {
       total_customers: totalCustomers,
       total_suppliers: totalSuppliers,
       pending_customer_credit: totalCustomerCredit,
-      pending_supplier_payables: totalSupplierPayable
+      pending_supplier_payables: totalSupplierPayable,
+      total_payable_khata: totalPayableKhata
     },
     branch_comparison: branchComparison,
     payment_methods: paymentMethods,

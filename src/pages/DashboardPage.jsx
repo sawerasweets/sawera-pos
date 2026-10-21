@@ -12,7 +12,9 @@ import {
   PlusCircle,
   ShoppingBag,
   Clock,
-  Sparkles
+  Sparkles,
+  HandCoins,
+  BookOpen
 } from 'lucide-react';
 
 export function DashboardPage({ onNavigate }) {
@@ -143,7 +145,7 @@ export function DashboardPage({ onNavigate }) {
       </div>
 
       {/* PRIMARY KPI METRICS GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Sales Card */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-amber-400 transition">
@@ -220,6 +222,31 @@ export function DashboardPage({ onNavigate }) {
               Shop rent, bills &amp; logistics
             </p>
           </div>
+        </div>
+
+        {/* Payable Khata Card (پیسے دینے ہیں) */}
+        <div 
+          onClick={() => onNavigate?.('khata')}
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-amber-500 transition cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              {lang === 'ur' ? 'پیسے دینے ہیں (کھاتہ)' : 'Payable Khata (دینے ہیں)'}
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center group-hover:scale-105 transition">
+              <HandCoins className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight flex items-baseline gap-1">
+              <span>Rs. {Number(kpis.total_payable_khata || 0).toLocaleString()}</span>
+            </h3>
+            <p className="text-xs text-slate-500 font-semibold mt-1 flex items-center justify-between">
+              <span>{lang === 'ur' ? 'واجب الادا رقم و قرضہ' : 'Total money owed to others'}</span>
+              <span className="text-[11px] text-amber-600 font-bold group-hover:underline">کھاتہ &rarr;</span>
+            </p>
+          </div>
+          <div className="absolute -bottom-1 -right-1 w-16 h-16 bg-amber-50 rounded-full -z-0 opacity-40 pointer-events-none" />
         </div>
 
       </div>
