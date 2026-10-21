@@ -102,10 +102,8 @@ export async function initTursoSync() {
           const records = JSON.parse(String(row.data_json));
           if (!Array.isArray(records)) continue;
 
-          // Delete existing local table records
-          db.exec(`DELETE FROM ${tableName};`);
-
           if (records.length > 0) {
+            db.exec(`DELETE FROM ${tableName};`);
             const cols = Object.keys(records[0]);
             const placeholders = cols.map(() => '?').join(', ');
             const stmt = db.prepare(`INSERT OR REPLACE INTO ${tableName} (${cols.join(', ')}) VALUES (${placeholders})`);
@@ -113,8 +111,16 @@ export async function initTursoSync() {
             for (const item of records) {
               stmt.run(...cols.map(c => item[c]));
             }
+            restoredCount++;
+          } else {
+            // If cloud snapshot has 0 records, do NOT wipe local table if local already has rows
+            const localCount = db.prepare(`SELECT COUNT(*) as count FROM ${tableName}`).get()?.count || 0;
+            if (localCount === 0) {
+              db.exec(`DELETE FROM ${tableName};`);
+            } else {
+              console.log(`[Turso Cloud] Preserving ${localCount} local records in "${tableName}" because cloud snapshot was empty.`);
+            }
           }
-          restoredCount++;
         } catch (tableErr) {
           console.error(`[Turso Cloud] Error restoring table ${tableName}:`, tableErr.message);
         }

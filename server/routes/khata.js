@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db, { logAudit } from '../db.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
+import { flushCloudSyncNow } from '../tursoSync.js';
 
 const router = Router();
 
@@ -108,7 +109,7 @@ router.get('/:id', authenticate, (req, res) => {
 });
 
 // 3. Create New Khata Account
-router.post('/', authenticate, (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
     const { name, phone, type = 'payable', opening_balance = 0, notes, branch_id } = req.body;
 
@@ -156,11 +157,22 @@ router.post('/', authenticate, (req, res) => {
       );
     }
 
-    logAudit(req.user?.id, 'CREATE_KHATA', 'khata_accounts', accountId, {
-      name,
-      type: accType,
-      opening_balance: openBal
+    logAudit({
+      userId: req.user?.id,
+      username: req.user?.username,
+      branchId,
+      action: 'CREATE_KHATA',
+      entity: 'KHATA',
+      entityId: accountId,
+      details: `Created khata account "${name.trim()}" (${accType}) with opening balance Rs. ${openBal}`
     });
+
+    // Synchronously commit to Turso Cloud so container redeploys or restarts can NEVER lose this account
+    try {
+      await flushCloudSyncNow();
+    } catch (syncErr) {
+      console.warn('[Khata] Notice while syncing new account to Turso Cloud:', syncErr.message);
+    }
 
     const created = db.prepare('SELECT * FROM khata_accounts WHERE id = ?').get(accountId);
     res.status(201).json({ message: 'Khata account created successfully.', account: created });
@@ -171,7 +183,7 @@ router.post('/', authenticate, (req, res) => {
 });
 
 // 4. Update Khata Account info
-router.put('/:id', authenticate, (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
     const { name, phone, notes, status } = req.body;
     const account = db.prepare('SELECT * FROM khata_accounts WHERE id = ?').get(req.params.id);
@@ -196,6 +208,22 @@ router.put('/:id', authenticate, (req, res) => {
       account.id
     );
 
+    logAudit({
+      userId: req.user?.id,
+      username: req.user?.username,
+      branchId: account.branch_id,
+      action: 'UPDATE_KHATA',
+      entity: 'KHATA',
+      entityId: account.id,
+      details: `Updated khata account "${account.name}"`
+    });
+
+    try {
+      await flushCloudSyncNow();
+    } catch (syncErr) {
+      console.warn('[Khata] Notice while syncing update to Turso Cloud:', syncErr.message);
+    }
+
     const updated = db.prepare('SELECT * FROM khata_accounts WHERE id = ?').get(account.id);
     res.json({ message: 'Khata account updated.', account: updated });
   } catch (err) {
@@ -205,7 +233,7 @@ router.put('/:id', authenticate, (req, res) => {
 });
 
 // 5. Delete Khata Account
-router.delete('/:id', authenticate, (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const account = db.prepare('SELECT * FROM khata_accounts WHERE id = ?').get(req.params.id);
     if (!account) {
@@ -215,7 +243,22 @@ router.delete('/:id', authenticate, (req, res) => {
     db.prepare('DELETE FROM khata_entries WHERE account_id = ?').run(account.id);
     db.prepare('DELETE FROM khata_accounts WHERE id = ?').run(account.id);
 
-    logAudit(req.user?.id, 'DELETE_KHATA', 'khata_accounts', account.id, { name: account.name });
+    logAudit({
+      userId: req.user?.id,
+      username: req.user?.username,
+      branchId: account.branch_id,
+      action: 'DELETE_KHATA',
+      entity: 'KHATA',
+      entityId: account.id,
+      details: `Deleted khata account "${account.name}"`
+    });
+
+    try {
+      await flushCloudSyncNow();
+    } catch (syncErr) {
+      console.warn('[Khata] Notice while syncing delete to Turso Cloud:', syncErr.message);
+    }
+
     res.json({ message: 'Khata account and all its entries deleted successfully.' });
   } catch (err) {
     console.error('Error deleting khata account:', err);
@@ -224,7 +267,7 @@ router.delete('/:id', authenticate, (req, res) => {
 });
 
 // 6. Record New Payment / Transaction / Installment for an Account
-router.post('/:id/entries', authenticate, (req, res) => {
+router.post('/:id/entries', authenticate, async (req, res) => {
   try {
     const { entry_type = 'payment', amount, payment_method = 'cash', reference_no, notes, entry_date } = req.body;
 
@@ -304,6 +347,23 @@ router.post('/:id/entries', authenticate, (req, res) => {
       account.id
     );
 
+    logAudit({
+      userId: req.user?.id,
+      username: req.user?.username,
+      branchId,
+      action: 'KHATA_PAYMENT',
+      entity: 'KHATA',
+      entityId: account.id,
+      details: `Recorded ${entry_type} of Rs. ${payAmount} for "${account.name}" (${payment_method})`
+    });
+
+    // Synchronously commit to Turso Cloud
+    try {
+      await flushCloudSyncNow();
+    } catch (syncErr) {
+      console.warn('[Khata] Notice while syncing new entry to Turso Cloud:', syncErr.message);
+    }
+
     const updatedAccount = db.prepare('SELECT * FROM khata_accounts WHERE id = ?').get(account.id);
     const recordedEntry = db.prepare('SELECT * FROM khata_entries WHERE id = ?').get(Number(insertRes.lastInsertRowid));
 
@@ -319,7 +379,7 @@ router.post('/:id/entries', authenticate, (req, res) => {
 });
 
 // 7. Delete an Entry and Recalculate Account Balance
-router.delete('/:id/entries/:entryId', authenticate, (req, res) => {
+router.delete('/:id/entries/:entryId', authenticate, async (req, res) => {
   try {
     const account = db.prepare('SELECT * FROM khata_accounts WHERE id = ?').get(req.params.id);
     if (!account) {
@@ -379,6 +439,22 @@ router.delete('/:id/entries/:entryId', authenticate, (req, res) => {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(runningBalance, totalPaid, totalReceived, newStatus, account.id);
+
+    logAudit({
+      userId: req.user?.id,
+      username: req.user?.username,
+      branchId: account.branch_id,
+      action: 'DELETE_KHATA_ENTRY',
+      entity: 'KHATA',
+      entityId: account.id,
+      details: `Deleted ledger entry #${entry.id} for "${account.name}" (Amount: Rs. ${entry.amount})`
+    });
+
+    try {
+      await flushCloudSyncNow();
+    } catch (syncErr) {
+      console.warn('[Khata] Notice while syncing entry deletion to Turso Cloud:', syncErr.message);
+    }
 
     const updatedAccount = db.prepare('SELECT * FROM khata_accounts WHERE id = ?').get(account.id);
     res.json({ message: 'Entry deleted and balance recalculated.', account: updatedAccount });
