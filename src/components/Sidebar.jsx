@@ -86,7 +86,7 @@ export function Sidebar({ currentTab, onSelectTab }) {
       id: 'khata',
       label: t('nav_khata'),
       icon: BookOpen,
-      allowed: user?.role === 'admin' || user?.role === 'manager' || hasPermission('manage_customers')
+      allowed: true
     },
     {
       id: 'suppliers',
