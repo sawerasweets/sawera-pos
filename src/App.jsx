@@ -48,7 +48,7 @@ function MainApp() {
       case 'dashboard':
         return <DashboardPage onNavigate={setCurrentTab} />;
       case 'pos':
-        return <PosPage />;
+        return <PosPage onNavigate={setCurrentTab} />;
       case 'products':
         return <ProductsPage />;
       case 'inventory':
@@ -86,17 +86,21 @@ function MainApp() {
     }
   };
 
+  const isPos = currentTab === 'pos';
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 font-sans selection:bg-amber-500 selection:text-white">
       {/* Top Navbar */}
-      <Navbar onNavigate={setCurrentTab} />
+      <Navbar currentTab={currentTab} onNavigate={setCurrentTab} />
 
       {/* Main Layout: Left Sidebar + Central Screen */}
       <div className="flex-1 flex overflow-hidden">
-        <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
+        {!isPos && (
+          <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
+        )}
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/90">
-          <div className="max-w-7xl mx-auto">
+        <main className={`flex-1 overflow-y-auto ${isPos ? 'p-2 sm:p-3 bg-slate-100' : 'p-4 sm:p-6 bg-slate-100/90'}`}>
+          <div className={isPos ? 'w-full' : 'max-w-7xl mx-auto'}>
             {renderActivePage()}
           </div>
         </main>

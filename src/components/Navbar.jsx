@@ -13,10 +13,11 @@ import {
   PlusCircle,
   TrendingUp,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  LayoutDashboard
 } from 'lucide-react';
 
-export function Navbar({ onNavigate }) {
+export function Navbar({ onNavigate, currentTab }) {
   const { user, branches, activeBranchId, switchBranch, activeRegister, lang, toggleLanguage, setLanguage, logout, t } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const [changePassModal, setChangePassModal] = useState(false);
@@ -119,14 +120,25 @@ export function Navbar({ onNavigate }) {
             <span>{activeRegister ? t('active_register') : t('closed_register')}</span>
           </button>
 
-          {/* POS Quick Button */}
-          <button
-            onClick={() => onNavigate('pos')}
-            className="flex items-center space-x-1.5 rtl:space-x-reverse bg-gradient-to-r from-amber-600 to-rose-600 text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-lg shadow-sm hover:from-amber-700 hover:to-rose-700 transition cursor-pointer"
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span>{lang === 'ur' ? 'پی او ایس بلنگ' : 'POS Billing'}</span>
-          </button>
+          {/* POS Quick Button / Dashboard Switcher */}
+          {currentTab === 'pos' ? (
+            <button
+              onClick={() => onNavigate('dashboard')}
+              className="flex items-center space-x-1.5 rtl:space-x-reverse bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-amber-400 border border-amber-500/50 text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-lg shadow-sm transition cursor-pointer"
+              title="Return to Main Dashboard & Full Menu"
+            >
+              <LayoutDashboard className="w-4 h-4 text-amber-400" />
+              <span>{lang === 'ur' ? 'ڈیش بورڈ' : 'Dashboard'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => onNavigate('pos')}
+              className="flex items-center space-x-1.5 rtl:space-x-reverse bg-gradient-to-r from-amber-600 to-rose-600 text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-lg shadow-sm hover:from-amber-700 hover:to-rose-700 transition cursor-pointer"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>{lang === 'ur' ? 'پی او ایس بلنگ' : 'POS Billing'}</span>
+            </button>
+          )}
 
           {/* Explicit Language Switcher: English | اردو */}
           <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-bold shadow-2xs">

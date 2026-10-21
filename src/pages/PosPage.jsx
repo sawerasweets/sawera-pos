@@ -32,10 +32,11 @@ import {
   FileSpreadsheet,
   ShieldCheck,
   Tag,
-  Clock
+  Clock,
+  LayoutDashboard
 } from 'lucide-react';
 
-export function PosPage() {
+export function PosPage({ onNavigate }) {
   const { activeBranchId, user, t, lang } = useAuth();
 
   // Catalog & Filter states
@@ -1101,6 +1102,16 @@ export function PosPage() {
           {/* Hardware Status & Shift Quick Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-slate-200 text-[11px] font-bold">
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onNavigate?.('dashboard')}
+                className="px-2.5 py-1 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-amber-400 border border-amber-500/50 rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                title="Return to Main Dashboard & Full Menu"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 text-amber-400" />
+                <span>{lang === 'ur' ? 'ڈیش بورڈ' : 'Dashboard'}</span>
+              </button>
+
               <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>Scanner: Ready</span>
