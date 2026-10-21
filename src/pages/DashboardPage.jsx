@@ -6,17 +6,13 @@ import {
   Receipt,
   Truck,
   Package,
-  AlertTriangle,
-  Users,
-  Building2,
   CreditCard,
   Layers,
   ArrowUpRight,
   PlusCircle,
   ShoppingBag,
   Clock,
-  Sparkles,
-  ArrowRight
+  Sparkles
 } from 'lucide-react';
 
 export function DashboardPage({ onNavigate }) {
@@ -62,7 +58,7 @@ export function DashboardPage({ onNavigate }) {
             </span>
           </h2>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            {lang === 'ur' ? 'تمام 4 برانچوں کی فروخت، منافع اور اسٹاک کی لائیو صورتحال' : 'Multi-branch sales, profit, cash drawer, and stock alert telemetry'}
+            {lang === 'ur' ? 'فروخت، خالص منافع اور یومیہ اخراجات کی لائیو صورتحال' : 'Live sales, net profit, and expense analytics telemetry'}
           </p>
         </div>
 
@@ -147,7 +143,7 @@ export function DashboardPage({ onNavigate }) {
       </div>
 
       {/* PRIMARY KPI METRICS GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         
         {/* Sales Card */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-amber-400 transition">
@@ -226,118 +222,6 @@ export function DashboardPage({ onNavigate }) {
           </div>
         </div>
 
-        {/* Cash in Hand / Drawer */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-cyan-400 transition">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('cash_in_hand')}</span>
-            <div className="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center">
-              <CreditCard className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-cyan-800 tracking-tight">
-              Rs. {Number(kpis.cash_in_hand || 0).toLocaleString()}
-            </h3>
-            <p className="text-xs text-slate-500 font-semibold mt-1">
-              Active cash drawer balance
-            </p>
-          </div>
-        </div>
-
-      </div>
-
-      {/* SECONDARY METRICS (Customer Udhaar, Supplier Payables, Stock alerts) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-semibold">{t('pending_udhaar')}</span>
-            <Users className="w-4 h-4 text-amber-600" />
-          </div>
-          <p className="text-lg font-bold text-slate-900">
-            Rs. {Number(kpis.pending_customer_credit || 0).toLocaleString()}
-          </p>
-          <p className="text-[11px] text-slate-500">{kpis.total_customers || 0} registered buyers</p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-semibold">{t('supplier_payables')}</span>
-            <Building2 className="w-4 h-4 text-purple-600" />
-          </div>
-          <p className="text-lg font-bold text-slate-900">
-            Rs. {Number(kpis.pending_supplier_payables || 0).toLocaleString()}
-          </p>
-          <p className="text-[11px] text-slate-500">{kpis.total_suppliers || 0} wholesale vendors</p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-semibold">{t('low_stock_items')}</span>
-            <AlertTriangle className="w-4 h-4 text-amber-500" />
-          </div>
-          <p className="text-lg font-bold text-amber-600">
-            {kpis.low_stock_count || 0} Items
-          </p>
-          <p className="text-[11px] text-slate-500">Need restocking</p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-semibold">{t('out_of_stock')}</span>
-            <Package className="w-4 h-4 text-rose-500" />
-          </div>
-          <p className="text-lg font-bold text-rose-600">
-            {kpis.out_of_stock_count || 0} Items
-          </p>
-          <p className="text-[11px] text-slate-500">Zero inventory in branch</p>
-        </div>
-
-      </div>
-
-      {/* MULTI-BRANCH COMPARISON SECTION */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-amber-600" />
-              <span>{t('branch_performance')}</span>
-            </h3>
-            <p className="text-xs text-slate-500">Comparative revenue breakdown across Branch 1, Branch 2, Branch 3, and Branch 4</p>
-          </div>
-          <button
-            onClick={() => onNavigate('branches')}
-            className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1"
-          >
-            <span>Manage Branches</span>
-            <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {(data?.branch_comparison || []).map((br) => (
-            <div key={br.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-extrabold bg-slate-200 text-slate-800 px-2 py-0.5 rounded">
-                  {br.code}
-                </span>
-                <span className="text-[11px] text-slate-500 font-semibold">{br.invoice_count} sales</span>
-              </div>
-              <h4 className="font-bold text-sm text-slate-900 truncate">{br.name}</h4>
-              <div className="mt-2 pt-2 border-t border-slate-200/80">
-                <div className="text-xs text-slate-500">Revenue</div>
-                <div className="text-lg font-black text-slate-900">
-                  Rs. {Number(br.sales_amount || 0).toLocaleString()}
-                </div>
-                {!isCashier && (
-                  <div className="text-[11px] font-semibold text-emerald-600 mt-0.5">
-                    Profit: Rs. {Number(br.profit_amount || 0).toLocaleString()}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* LOWER SECTION: TOP PRODUCTS & PAYMENT METHODS */}
