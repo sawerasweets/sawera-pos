@@ -98,10 +98,38 @@ app.get('/api/health', (req, res) => {
 // Serve frontend in production
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 if (fs.existsSync(DIST_DIR)) {
-  app.use(express.static(DIST_DIR));
+  // Never cache index.html
+  const sendFreshIndex = (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.sendFile(path.join(DIST_DIR, 'index.html'));
+  };
+
+  app.get('/', sendFreshIndex);
+  app.get('/index.html', sendFreshIndex);
+
+  // Serve hashed assets (/assets/...) with immutable cache
+  app.use('/assets', express.static(path.join(DIST_DIR, 'assets'), {
+    maxAge: '1y',
+    immutable: true
+  }));
+
+  // General static files
+  app.use(express.static(DIST_DIR, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    }
+  }));
+
+  // SPA fallback
   app.use((req, res, next) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
-      return res.sendFile(path.join(DIST_DIR, 'index.html'));
+      return sendFreshIndex(req, res);
     }
     next();
   });

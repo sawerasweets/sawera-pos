@@ -12,7 +12,8 @@ import {
   ShoppingBag,
   PlusCircle,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 
 export function Navbar({ onNavigate }) {
@@ -148,6 +149,19 @@ export function Navbar({ onNavigate }) {
               اردو
             </button>
           </div>
+
+          {/* Quick Refresh App Button */}
+          <button
+            type="button"
+            title="Refresh App & Load Latest Updates"
+            onClick={() => {
+              window.location.href = window.location.origin + window.location.pathname + '?reload=' + Date.now();
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 rounded-lg border border-slate-200 text-xs font-bold transition cursor-pointer shadow-2xs"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-emerald-600 animate-spin-hover" />
+            <span className="hidden sm:inline">{lang === 'ur' ? 'ریفریش' : 'Refresh'}</span>
+          </button>
 
           {/* User Profile Dropdown */}
           <div className="relative">

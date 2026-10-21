@@ -385,15 +385,21 @@ export function ProductsPage() {
                       Rs. {Number(p.sale_price).toLocaleString()}
                     </td>
                     <td className="py-3 px-3 text-center">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full font-bold text-[11px] ${
-                        isOut
-                          ? 'bg-rose-100 text-rose-700'
-                          : isLow
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-emerald-100 text-emerald-800'
-                      }`}>
-                        {p.branch_stock} {p.unit}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(p)}
+                        title="Click to edit stock quantity"
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[11px] cursor-pointer hover:scale-105 hover:ring-2 hover:ring-emerald-400 transition ${
+                          isOut
+                            ? 'bg-rose-100 text-rose-700'
+                            : isLow
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        <span>{p.branch_stock} {p.unit}</span>
+                        <Edit className="w-3 h-3 opacity-60 hover:opacity-100" />
+                      </button>
                     </td>
                     <td className="py-3 px-3 text-center">
                       <div className="flex items-center justify-center space-x-1 rtl:space-x-reverse">
