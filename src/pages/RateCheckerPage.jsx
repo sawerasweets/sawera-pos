@@ -15,7 +15,10 @@ import {
   Volume2,
   Check,
   Smartphone,
-  ExternalLink
+  ExternalLink,
+  Download,
+  Info,
+  ShieldCheck
 } from 'lucide-react';
 import { CameraBarcodeModal } from '../components/CameraBarcodeModal';
 import { playBeep } from '../utils/audio';
@@ -30,6 +33,56 @@ export function RateCheckerPage({ onBackToPos }) {
   const [selectedBranchId, setSelectedBranchId] = useState(() => {
     return localStorage.getItem('sawera_worker_branch') || '1';
   });
+
+  // Standalone PWA detection
+  const [isStandalone, setIsStandalone] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true ||
+      window.location.search.includes('pwa=1')
+    );
+  });
+
+  // PWA Install prompt state
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstallable(false);
+      setDeferredPrompt(null);
+      setIsStandalone(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      setShowInstallHelp(true);
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+    }
+    setDeferredPrompt(null);
+  };
 
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -260,23 +313,42 @@ export function RateCheckerPage({ onBackToPos }) {
               {isUrdu ? 'English Interface' : 'اردو انٹرفیس'}
             </button>
 
-            {onBackToPos ? (
-              <button
-                type="button"
-                onClick={onBackToPos}
-                className="hover:text-slate-200 transition cursor-pointer flex items-center gap-1"
-              >
-                <span>POS Login</span>
-                <ExternalLink className="w-3 h-3" />
-              </button>
+            {isStandalone ? (
+              <span className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Standalone App</span>
+              </span>
             ) : (
-              <a
-                href="/"
-                className="hover:text-slate-200 transition flex items-center gap-1"
-              >
-                <span>POS Login</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              <div className="flex items-center gap-2">
+                {isInstallable && (
+                  <button
+                    type="button"
+                    onClick={handleInstallClick}
+                    className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{isUrdu ? 'ایپ انسٹال کریں' : 'Install App'}</span>
+                  </button>
+                )}
+                {onBackToPos ? (
+                  <button
+                    type="button"
+                    onClick={onBackToPos}
+                    className="hover:text-slate-200 transition cursor-pointer flex items-center gap-1"
+                  >
+                    <span>POS Login</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                ) : (
+                  <a
+                    href="/"
+                    className="hover:text-slate-200 transition flex items-center gap-1"
+                  >
+                    <span>POS Login</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
             )}
           </div>
 
@@ -353,6 +425,54 @@ export function RateCheckerPage({ onBackToPos }) {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-md w-full mx-auto p-4 flex flex-col justify-start gap-4">
+
+        {/* PWA Install App Banner (Shows when not installed in standalone mode) */}
+        {!isStandalone && (
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl p-3.5 shadow-lg border border-emerald-400/40 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                <Download className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-extrabold text-xs">
+                  {isUrdu ? '📱 موبائل میں ایپ انسٹال کریں' : '📱 Install Mobile App'}
+                </p>
+                <p className="text-[10px] text-emerald-100 truncate">
+                  {isUrdu ? 'ہوم اسکرین پر شامل کر کے 1-کلک میں ریٹ چیک کریں' : 'Add to home screen for 1-tap price checks'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              className="px-3.5 py-1.5 bg-white text-emerald-900 hover:bg-emerald-50 font-black text-xs rounded-xl shadow-md transition shrink-0 cursor-pointer active:scale-95"
+            >
+              {isUrdu ? 'انسٹال کریں' : 'Install'}
+            </button>
+          </div>
+        )}
+
+        {/* PWA Installation Help Guide (if user clicks or needs manual guide) */}
+        {showInstallHelp && !isStandalone && (
+          <div className="p-3 bg-slate-900 border border-emerald-500/50 rounded-2xl text-xs text-slate-300 space-y-1 animate-fadeIn">
+            <p className="font-bold text-emerald-400 flex items-center gap-1">
+              <Info className="w-3.5 h-3.5" />
+              <span>{isUrdu ? 'ایپ انسٹال کرنے کا طریقہ:' : 'How to Install on Android:'}</span>
+            </p>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              {isUrdu
+                ? 'اپنے کروم براؤزر کے اوپر دائیں کونے میں 3 ڈاٹس (⋮) دبائیں اور "Install app" یا "Add to Home screen" پر کلک کریں۔ ایپ آپ کے موبائل کی اسکرین پر آ جائے گی۔'
+                : 'Tap the 3 dots (⋮) in Chrome and tap "Install app" or "Add to Home screen". The app will be added to your phone.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowInstallHelp(false)}
+              className="text-[10px] text-amber-400 underline font-semibold mt-1 cursor-pointer"
+            >
+              {isUrdu ? 'ٹھیک ہے / سمجھ آ گئی' : 'Dismiss'}
+            </button>
+          </div>
+        )}
         
         {/* Large Primary Action: SCAN PRODUCT */}
         <div className="bg-gradient-to-br from-amber-600 via-amber-700 to-amber-900 rounded-3xl p-5 shadow-2xl border border-amber-500/40 text-center relative overflow-hidden">

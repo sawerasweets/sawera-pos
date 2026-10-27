@@ -1,0 +1,44 @@
+{
+  "name": "Sawera Rate Checker - سویرا ریٹ چیکر",
+  "short_name": "Rate Checker",
+  "description": "Sawera Sweets & Bakers Barcode Price Checker for Shop Workers",
+  "id": "/rate-checker",
+  "start_url": "/rate-checker?pwa=1",
+  "scope": "/rate-checker",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#059669",
+  "dir": "auto",
+  "lang": "ur",
+  "categories": ["business", "shopping", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Scan Product",
+      "short_name": "Scan",
+      "description": "Scan a product barcode to view price",
+      "url": "/rate-checker?pwa=1&action=scan",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

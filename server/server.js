@@ -122,10 +122,13 @@ if (fs.existsSync(DIST_DIR)) {
   // General static files
   app.use(express.static(DIST_DIR, {
     setHeaders: (res, filePath) => {
-      if (filePath.endsWith('.html')) {
+      if (filePath.endsWith('.html') || filePath.endsWith('sw.js') || filePath.endsWith('manifest.json')) {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
+        if (filePath.endsWith('sw.js')) {
+          res.setHeader('Service-Worker-Allowed', '/');
+        }
       }
     }
   }));
