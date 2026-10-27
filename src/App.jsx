@@ -22,10 +22,19 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ProductionPage } from './pages/ProductionPage';
 import { WastePage } from './pages/WastePage';
 import { StockAuditPage } from './pages/StockAuditPage';
+import { RateCheckerPage } from './pages/RateCheckerPage';
 
 function MainApp() {
   const { user, loading } = useAuth();
-  const [currentTab, setCurrentTab] = useState('dashboard');
+  const [currentTab, setCurrentTab] = useState(() => {
+    if (typeof window !== 'undefined' && (
+      window.location.pathname.startsWith('/rate-checker') ||
+      window.location.search.includes('tab=rate-checker')
+    )) {
+      return 'rate-checker';
+    }
+    return 'dashboard';
+  });
 
   if (loading) {
     return (
@@ -40,14 +49,36 @@ function MainApp() {
     );
   }
 
+  const isRateChecker = currentTab === 'rate-checker' || (
+    typeof window !== 'undefined' && (
+      window.location.pathname.startsWith('/rate-checker') ||
+      window.location.search.includes('tab=rate-checker')
+    )
+  );
+
+  if (isRateChecker && !user) {
+    return (
+      <RateCheckerPage
+        onBackToPos={() => {
+          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/rate-checker')) {
+            window.history.pushState({}, '', '/');
+          }
+          setCurrentTab('dashboard');
+        }}
+      />
+    );
+  }
+
   if (!user) {
-    return <LoginPage />;
+    return <LoginPage onOpenRateChecker={() => setCurrentTab('rate-checker')} />;
   }
 
   const renderActivePage = () => {
     switch (currentTab) {
       case 'dashboard':
         return <DashboardPage onNavigate={setCurrentTab} />;
+      case 'rate-checker':
+        return <RateCheckerPage onBackToPos={() => setCurrentTab('dashboard')} />;
       case 'pos':
         return <PosPage onNavigate={setCurrentTab} />;
       case 'products':
@@ -89,7 +120,7 @@ function MainApp() {
     }
   };
 
-  const isPos = currentTab === 'pos';
+  const isPos = currentTab === 'pos' || currentTab === 'rate-checker';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 font-sans selection:bg-amber-500 selection:text-white">

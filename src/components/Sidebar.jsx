@@ -20,7 +20,8 @@ import {
   ChefHat,
   Trash2,
   ClipboardCheck,
-  BookOpen
+  BookOpen,
+  ScanLine
 } from 'lucide-react';
 
 export function Sidebar({ currentTab, onSelectTab }) {
@@ -39,6 +40,12 @@ export function Sidebar({ currentTab, onSelectTab }) {
       icon: ShoppingBag,
       highlight: true,
       allowed: hasPermission('pos_access')
+    },
+    {
+      id: 'rate-checker',
+      label: lang === 'ur' ? 'ریٹ چیکر (Rate Checker)' : 'Rate Checker',
+      icon: ScanLine,
+      allowed: true
     },
     {
       id: 'products',

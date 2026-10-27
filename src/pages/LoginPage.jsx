@@ -8,10 +8,11 @@ import {
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ScanLine
 } from 'lucide-react';
 
-export function LoginPage() {
+export function LoginPage({ onOpenRateChecker }) {
   const { login, lang } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -165,6 +166,27 @@ export function LoginPage() {
               <ArrowRight className="w-4 h-4 rtl:rotate-180" />
             </button>
           </form>
+
+          {/* Quick Worker Rate Checker Access */}
+          <div className="mt-5 pt-4 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenRateChecker) {
+                  onOpenRateChecker();
+                } else if (typeof window !== 'undefined') {
+                  window.location.href = '/rate-checker';
+                }
+              }}
+              className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition shadow-xs cursor-pointer"
+            >
+              <ScanLine className="w-4 h-4 text-emerald-600" />
+              <span>📱 Mobile Rate Checker • ریٹ چیکر</span>
+            </button>
+            <p className="text-[10px] text-center text-slate-500 mt-1 font-medium">
+              Shop workers barcode price checker (No Admin login needed)
+            </p>
+          </div>
 
           {/* SECURE TERMINAL FOOTER */}
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-1.5 text-slate-400 text-[11px] font-semibold">

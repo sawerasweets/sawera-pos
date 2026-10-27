@@ -42,7 +42,9 @@ export function requireRole(allowedRoles) {
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    // All authorized users operate as Admin with Full Access
+    if (req.user.role === 'rate_checker' && !allowedRoles.includes('rate_checker')) {
+      return res.status(403).json({ error: 'Access denied: Rate checker role has read-only price verification access only.' });
+    }
     next();
   };
 }
@@ -52,7 +54,9 @@ export function requirePermission(permissionKey) {
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    // All authorized users operate as Admin with Full Access
+    if (req.user.role === 'rate_checker') {
+      return res.status(403).json({ error: 'Access denied: Rate checker workers cannot modify POS data or access administrative tools.' });
+    }
     next();
   };
 }

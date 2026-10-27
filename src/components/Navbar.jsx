@@ -14,7 +14,8 @@ import {
   TrendingUp,
   AlertCircle,
   RefreshCw,
-  LayoutDashboard
+  LayoutDashboard,
+  ScanLine
 } from 'lucide-react';
 
 export function Navbar({ onNavigate, currentTab }) {
@@ -118,6 +119,20 @@ export function Navbar({ onNavigate, currentTab }) {
           >
             <span className={`w-2 h-2 rounded-full ${activeRegister ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
             <span>{activeRegister ? t('active_register') : t('closed_register')}</span>
+          </button>
+
+          {/* Rate Checker Quick Button */}
+          <button
+            onClick={() => onNavigate('rate-checker')}
+            className={`hidden sm:flex items-center space-x-1.5 rtl:space-x-reverse text-xs sm:text-sm font-bold px-3 py-1.5 rounded-lg border transition cursor-pointer shadow-xs ${
+              currentTab === 'rate-checker'
+                ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+            }`}
+            title="Mobile Rate Checker (ریٹ چیکر)"
+          >
+            <ScanLine className="w-4 h-4" />
+            <span>{lang === 'ur' ? 'ریٹ چیکر' : 'Rate Checker'}</span>
           </button>
 
           {/* POS Quick Button / Dashboard Switcher */}
