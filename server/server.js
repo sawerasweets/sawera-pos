@@ -38,7 +38,7 @@ const __dirname = path.dirname(__filename);
 initDatabase();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -148,20 +148,19 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
-async function startServer() {
-  // Initialize Turso Cloud Sync (automatically pulls latest cloud state on container boot)
-  await initTursoSync();
+// Start server immediately so cloud platforms (Hostinger, etc.) detect healthy listen() within 3s
+const server = app.listen(PORT, () => {
+  console.log(`====================================================`);
+  console.log(`  SAWERA SWEET & BAKERS - POS & SHOP MANAGEMENT`);
+  console.log(`  Server running on port ${PORT}`);
+  console.log(`  Cloud Database Sync: ACTIVE (Turso Lifetime Storage)`);
+  console.log(`====================================================`);
 
-  app.listen(PORT, () => {
-    console.log(`====================================================`);
-    console.log(`  SAWERA SWEET & BAKERS - POS & SHOP MANAGEMENT`);
-    console.log(`  Server running on http://localhost:${PORT}`);
-    console.log(`  Cloud Database Sync: ACTIVE (Turso Lifetime Storage)`);
-    console.log(`====================================================`);
+  // Initialize Turso Cloud Sync in background (non-blocking)
+  initTursoSync().catch((err) => {
+    console.error('[Turso Cloud] Initial sync failed:', err.message);
   });
-}
-
-startServer();
+});
 
 // Graceful shutdown flush
 process.on('SIGTERM', async () => {

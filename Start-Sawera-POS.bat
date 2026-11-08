@@ -17,6 +17,7 @@ REM Open default browser
 start "" "http://localhost:5000"
 
 REM Run Node.js production server
+set PORT=5000
 node server.js
 
 pause
