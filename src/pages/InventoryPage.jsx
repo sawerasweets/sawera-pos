@@ -11,8 +11,10 @@ import {
   X,
   CheckCircle,
   Package,
-  Plus
+  Plus,
+  FileSpreadsheet
 } from 'lucide-react';
+import { InventoryImportTab } from '../components/InventoryImportTab';
 
 export function InventoryPage() {
   const { activeBranchId, branches, hasPermission, lang } = useAuth();
@@ -247,9 +249,16 @@ export function InventoryPage() {
           </button>
           <button
             onClick={() => setActiveTab('transfers')}
-            className={`px-4 py-2 rounded-xl transition ${activeTab === 'transfers' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'}`}
+            className={`px-4 py-2 rounded-xl transition cursor-pointer ${activeTab === 'transfers' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             Branch Transfers Log
+          </button>
+          <button
+            onClick={() => setActiveTab('import')}
+            className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'import' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'}`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Import &amp; Update Products / ایکسل امپورٹ</span>
           </button>
         </div>
 
@@ -421,6 +430,11 @@ export function InventoryPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* TAB 4: IMPORT & UPDATE PRODUCTS */}
+      {activeTab === 'import' && (
+        <InventoryImportTab />
       )}
 
       {/* ADJUSTMENT MODAL */}
