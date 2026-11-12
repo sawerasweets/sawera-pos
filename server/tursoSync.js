@@ -60,6 +60,84 @@ export function getTursoClient() {
 }
 
 /**
+ * Restore database tables from Turso Cloud into local SQLite database
+ */
+export async function restoreFromCloud(client = getTursoClient()) {
+  if (!client) return { success: false, error: 'No Turso client' };
+
+  console.log('[Turso Cloud] Connecting to Turso database:', TURSO_URL);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS sawera_cloud_state (
+      table_name TEXT PRIMARY KEY,
+      data_json TEXT NOT NULL,
+      row_count INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  const remoteState = await client.execute('SELECT table_name, data_json, row_count, updated_at FROM sawera_cloud_state');
+  
+  if (remoteState.rows && remoteState.rows.length > 0) {
+    console.log(`[Turso Cloud] Found ${remoteState.rows.length} tables in cloud! Restoring state to local POS...`);
+    
+    db.exec('PRAGMA foreign_keys = OFF;');
+    db.exec('BEGIN TRANSACTION;');
+
+    let restoredCount = 0;
+    for (const row of remoteState.rows) {
+      const tableName = String(row.table_name);
+      if (!SYNC_TABLES.includes(tableName)) continue;
+
+      try {
+        const records = JSON.parse(String(row.data_json));
+        if (!Array.isArray(records)) continue;
+
+        if (records.length > 0) {
+          db.exec(`DELETE FROM ${tableName};`);
+          const cols = Object.keys(records[0]);
+          const placeholders = cols.map(() => '?').join(', ');
+          const stmt = db.prepare(`INSERT OR REPLACE INTO ${tableName} (${cols.join(', ')}) VALUES (${placeholders})`);
+          
+          for (const item of records) {
+            stmt.run(...cols.map(c => item[c]));
+          }
+          restoredCount++;
+        } else {
+          // If cloud snapshot has 0 records, do NOT wipe local table if local already has rows
+          const localCount = db.prepare(`SELECT COUNT(*) as count FROM ${tableName}`).get()?.count || 0;
+          if (localCount === 0) {
+            db.exec(`DELETE FROM ${tableName};`);
+          } else {
+            console.log(`[Turso Cloud] Preserving ${localCount} local records in "${tableName}" because cloud snapshot was empty.`);
+          }
+        }
+      } catch (tableErr) {
+        console.error(`[Turso Cloud] Error restoring table ${tableName}:`, tableErr.message);
+      }
+    }
+
+    db.exec('COMMIT;');
+    db.exec('PRAGMA foreign_keys = ON;');
+
+    // Safeguard: Clean up any orphaned foreign keys in restored products table
+    try {
+      db.exec(`
+        UPDATE products SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND supplier_id NOT IN (SELECT id FROM suppliers);
+        UPDATE products SET category_id = NULL WHERE category_id IS NOT NULL AND category_id NOT IN (SELECT id FROM categories);
+      `);
+    } catch (cleanErr) {
+      console.warn('[Turso Cloud] Foreign key integrity cleanup:', cleanErr.message);
+    }
+
+    console.log(`[Turso Cloud] Successfully restored ${restoredCount} tables from Turso Cloud!`);
+    return { success: true, restoredCount };
+  } else {
+    return { success: false, reason: 'Remote storage is empty' };
+  }
+}
+
+/**
  * Initialize Cloud Sync on Server Startup:
  * 1. Checks if Turso cloud has saved state.
  * 2. If found, restores tables into local SQLite database.
@@ -73,76 +151,10 @@ export async function initTursoSync() {
   }
 
   try {
-    console.log('[Turso Cloud] Connecting to Turso database:', TURSO_URL);
-
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS sawera_cloud_state (
-        table_name TEXT PRIMARY KEY,
-        data_json TEXT NOT NULL,
-        row_count INTEGER DEFAULT 0,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    // Check if cloud has saved tables
-    const remoteState = await client.execute('SELECT table_name, data_json, row_count, updated_at FROM sawera_cloud_state');
-    
-    if (remoteState.rows && remoteState.rows.length > 0) {
-      console.log(`[Turso Cloud] Found ${remoteState.rows.length} tables in cloud! Restoring state to local POS...`);
-      
-      db.exec('PRAGMA foreign_keys = OFF;');
-      db.exec('BEGIN TRANSACTION;');
-
-      let restoredCount = 0;
-      for (const row of remoteState.rows) {
-        const tableName = String(row.table_name);
-        if (!SYNC_TABLES.includes(tableName)) continue;
-
-        try {
-          const records = JSON.parse(String(row.data_json));
-          if (!Array.isArray(records)) continue;
-
-          if (records.length > 0) {
-            db.exec(`DELETE FROM ${tableName};`);
-            const cols = Object.keys(records[0]);
-            const placeholders = cols.map(() => '?').join(', ');
-            const stmt = db.prepare(`INSERT OR REPLACE INTO ${tableName} (${cols.join(', ')}) VALUES (${placeholders})`);
-            
-            for (const item of records) {
-              stmt.run(...cols.map(c => item[c]));
-            }
-            restoredCount++;
-          } else {
-            // If cloud snapshot has 0 records, do NOT wipe local table if local already has rows
-            const localCount = db.prepare(`SELECT COUNT(*) as count FROM ${tableName}`).get()?.count || 0;
-            if (localCount === 0) {
-              db.exec(`DELETE FROM ${tableName};`);
-            } else {
-              console.log(`[Turso Cloud] Preserving ${localCount} local records in "${tableName}" because cloud snapshot was empty.`);
-            }
-          }
-        } catch (tableErr) {
-          console.error(`[Turso Cloud] Error restoring table ${tableName}:`, tableErr.message);
-        }
-      }
-
-      db.exec('COMMIT;');
-      db.exec('PRAGMA foreign_keys = ON;');
-
-      // Safeguard: Clean up any orphaned foreign keys in restored products table
-      try {
-        db.exec(`
-          UPDATE products SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND supplier_id NOT IN (SELECT id FROM suppliers);
-          UPDATE products SET category_id = NULL WHERE category_id IS NOT NULL AND category_id NOT IN (SELECT id FROM categories);
-        `);
-      } catch (cleanErr) {
-        console.warn('[Turso Cloud] Foreign key integrity cleanup:', cleanErr.message);
-      }
-
-      console.log(`[Turso Cloud] Successfully restored ${restoredCount} tables from Turso Cloud!`);
-    } else {
+    const res = await restoreFromCloud(client);
+    if (!res.success && res.reason === 'Remote storage is empty') {
       console.log('[Turso Cloud] Cloud storage is clean/empty. Pushing current base configurations to cloud...');
-      await flushCloudSyncNow();
+      await flushCloudSyncNow(true);
     }
 
     // Set recurring auto-sync interval (every 60 seconds)
@@ -172,12 +184,33 @@ export function triggerCloudSync() {
 /**
  * Flush all current SQLite tables to Turso Cloud immediately
  */
-export async function flushCloudSyncNow() {
+export async function flushCloudSyncNow(force = false) {
   const client = getTursoClient();
   if (!client || isSyncing) return;
 
   isSyncing = true;
   try {
+    // Critical Overwrite Guard:
+    // If remote cloud has significantly more products than local (e.g. cloud has 4260, local has 777),
+    // we must NEVER overwrite cloud with our smaller local dataset!
+    // Instead, this node must pull the richer catalog from cloud.
+    if (!force) {
+      try {
+        const localProductCount = db.prepare('SELECT COUNT(*) as count FROM products').get()?.count || 0;
+        const remoteProdRow = await client.execute("SELECT row_count FROM sawera_cloud_state WHERE table_name = 'products'");
+        const remoteProductCount = remoteProdRow.rows?.[0]?.row_count ? Number(remoteProdRow.rows[0].row_count) : 0;
+        
+        if (remoteProductCount > localProductCount) {
+          console.warn(`[Turso Cloud] Remote has ${remoteProductCount} products vs local ${localProductCount}. Overwrite prevented! Auto-pulling richer cloud catalog into local database...`);
+          isSyncing = false;
+          await restoreFromCloud(client);
+          return;
+        }
+      } catch (checkErr) {
+        // Table or row might not exist yet, proceed
+      }
+    }
+
     const batchStatements = [];
 
     for (const table of SYNC_TABLES) {
