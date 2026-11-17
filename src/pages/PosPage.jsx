@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { InvoicePrintModal } from '../components/InvoicePrintModal';
 import { CameraBarcodeModal } from '../components/CameraBarcodeModal';
@@ -160,7 +160,7 @@ export function PosPage({ onNavigate }) {
     try {
       const token = localStorage.getItem('sawera_token');
       const [prodRes, catRes, custRes, parkRes, setRes, shiftRes] = await Promise.all([
-        fetch(`/api/products?branch_id=${activeBranchId}&status=active`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`/api/products?branch_id=${activeBranchId}&status=active&pos_mode=true`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/categories', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/customers', { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`/api/pos/parked?branch_id=${activeBranchId}`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -652,7 +652,65 @@ export function PosPage({ onNavigate }) {
     });
   };
 
-  // High-Speed Barcode Scanner Lookup (USB barcode scanner or camera)
+  // Fast product scan handler (used by both in-memory instant scan & API fallback)
+  const processProductScan = (product, code) => {
+    // Auto-open Amount -> Weight Calculator for weight-based sweets
+    if (product.unit === 'Kg' || product.unit === 'Gram' || product.category_name?.toLowerCase().includes('sweet') || product.name?.toLowerCase().includes('barfi') || product.name?.toLowerCase().includes('mithai') || product.name?.toLowerCase().includes('jamun') || product.name?.toLowerCase().includes('jalebi')) {
+      playBeep();
+      const existingInCart = cart.find(item => item.id === product.id);
+      openWeightModal(product, existingInCart);
+      return;
+    }
+
+    // Check current cart quantity
+    const existingInCart = cart.find(item => item.id === product.id);
+    const currentQty = existingInCart ? existingInCart.quantity : 0;
+    const requestedQty = currentQty + 1;
+
+    // Stock validation
+    if (product.branch_stock <= 0) {
+      if (!allowNegativeStock) {
+        playErrorBuzz();
+        setScanNotification({
+          type: 'error',
+          message: `❌ Out of Stock! "${product.name}" has 0 stock in this branch.`
+        });
+        setTimeout(() => barcodeInputRef.current?.focus(), 60);
+        return;
+      } else {
+        // Negative stock allowed, show warning
+        setScanNotification({
+          type: 'warning',
+          message: `⚠️ Stock Warning: "${product.name}" has 0 stock (Negative stock allowed).`
+        });
+      }
+    } else if (requestedQty > product.branch_stock && !allowNegativeStock) {
+      playErrorBuzz();
+      setScanNotification({
+        type: 'error',
+        message: `❌ Stock limit reached! Only ${product.branch_stock} ${product.unit} available for "${product.name}".`
+      });
+      setTimeout(() => barcodeInputRef.current?.focus(), 60);
+      return;
+    }
+
+    // Add to cart or increment quantity
+    addToCart(product);
+    playBeep();
+
+    if (product.branch_stock > 0 || allowNegativeStock) {
+      setScanNotification({
+        type: 'success',
+        message: `✓ Added: ${product.name} — Rs. ${Number(product.sale_price).toLocaleString()} (Cart: ${requestedQty})`
+      });
+    }
+
+    setTimeout(() => {
+      barcodeInputRef.current?.focus();
+    }, 50);
+  };
+
+  // High-Speed Barcode Scanner Lookup (Instant In-Memory with API Fallback)
   const handleBarcodeScan = async (scannedCode) => {
     const code = (typeof scannedCode === 'string' ? scannedCode : barcodeInput).trim();
     if (!code) return;
@@ -660,6 +718,14 @@ export function PosPage({ onNavigate }) {
     setBarcodeInput('');
     setScanNotification(null);
 
+    // 1. Instant 0ms In-Memory Cache Lookup
+    const localProduct = productsByBarcode.get(code) || productsByBarcode.get(code.toUpperCase());
+    if (localProduct) {
+      processProductScan(localProduct, code);
+      return;
+    }
+
+    // 2. Server API Fallback if item wasn't in memory
     try {
       const token = localStorage.getItem('sawera_token');
       const res = await fetch(`/api/products/barcode/${encodeURIComponent(code)}?branch_id=${activeBranchId}`, {
@@ -668,63 +734,7 @@ export function PosPage({ onNavigate }) {
 
       if (res.ok) {
         const data = await res.json();
-        const product = data.product;
-
-        // Auto-open Amount -> Weight Calculator for weight-based sweets
-        if (product.unit === 'Kg' || product.unit === 'Gram' || product.category_name?.toLowerCase().includes('sweet')) {
-          playBeep();
-          const existingInCart = cart.find(item => item.id === product.id);
-          openWeightModal(product, existingInCart);
-          return;
-        }
-
-        // Check current cart quantity
-        const existingInCart = cart.find(item => item.id === product.id);
-        const currentQty = existingInCart ? existingInCart.quantity : 0;
-        const requestedQty = currentQty + 1;
-
-        // Stock validation
-        if (product.branch_stock <= 0) {
-          if (!allowNegativeStock) {
-            playErrorBuzz();
-            setScanNotification({
-              type: 'error',
-              message: `❌ Out of Stock! "${product.name}" has 0 stock in this branch.`
-            });
-            setTimeout(() => barcodeInputRef.current?.focus(), 60);
-            return;
-          } else {
-            // Negative stock allowed, show warning
-            setScanNotification({
-              type: 'warning',
-              message: `⚠️ Stock Warning: "${product.name}" has 0 stock (Negative stock allowed).`
-            });
-          }
-        } else if (requestedQty > product.branch_stock && !allowNegativeStock) {
-          playErrorBuzz();
-          setScanNotification({
-            type: 'error',
-            message: `❌ Stock limit reached! Only ${product.branch_stock} ${product.unit} available for "${product.name}".`
-          });
-          setTimeout(() => barcodeInputRef.current?.focus(), 60);
-          return;
-        }
-
-        // Add to cart or increment quantity
-        addToCart(product);
-        playBeep();
-
-        if (product.branch_stock > 0 || allowNegativeStock) {
-          setScanNotification({
-            type: 'success',
-            message: `✓ Added: ${product.name} — Rs. ${Number(product.sale_price).toLocaleString()} (Cart: ${requestedQty})`
-          });
-        }
-
-        setTimeout(() => {
-          barcodeInputRef.current?.focus();
-        }, 50);
-
+        processProductScan(data.product, code);
       } else if (res.status === 404) {
         // Unknown barcode
         playErrorBuzz();
@@ -1078,17 +1088,46 @@ export function PosPage({ onNavigate }) {
     }
   };
 
-  // Filtered Products
-  const filteredProducts = products.filter(p => {
-    const matchesCat = selectedCat === 'all' || String(p.category_id) === String(selectedCat);
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = !q ||
-      p.name.toLowerCase().includes(q) ||
-      (p.name_urdu && p.name_urdu.includes(q)) ||
-      (p.code && p.code.toLowerCase().includes(q)) ||
-      (p.barcode && p.barcode.toLowerCase().includes(q));
-    return matchesCat && matchesSearch;
-  });
+  const [posPage, setPosPage] = useState(1);
+  const ITEMS_PER_PAGE = 48;
+
+  // Reset page when category or search query changes
+  useEffect(() => {
+    setPosPage(1);
+  }, [selectedCat, searchQuery]);
+
+  // Fast in-memory barcode lookup map for instant 0ms scanning
+  const productsByBarcode = useMemo(() => {
+    const map = new Map();
+    for (const p of products) {
+      if (p.barcode) map.set(String(p.barcode).trim(), p);
+      if (p.code) map.set(String(p.code).trim().toUpperCase(), p);
+    }
+    return map;
+  }, [products]);
+
+  // High-performance memoized product filtering
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    const cat = selectedCat;
+    return products.filter(p => {
+      const matchesCat = cat === 'all' || String(p.category_id) === String(cat);
+      if (!matchesCat) return false;
+      if (!q) return true;
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.name_urdu && p.name_urdu.includes(q)) ||
+        (p.code && p.code.toLowerCase().includes(q)) ||
+        (p.barcode && p.barcode.toLowerCase().includes(q))
+      );
+    });
+  }, [products, selectedCat, searchQuery]);
+
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
+  const visibleProducts = useMemo(() => {
+    const start = (posPage - 1) * ITEMS_PER_PAGE;
+    return filteredProducts.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredProducts, posPage]);
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-100px)] no-print">
@@ -1293,87 +1332,119 @@ export function PosPage({ onNavigate }) {
           ))}
         </div>
 
-        {/* Products Grid */}
-        <div className="flex-1 p-3 overflow-y-auto bg-slate-50/50">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5">
-            {filteredProducts.map((p) => {
-              const isLowStock = p.branch_stock <= p.min_stock;
-              const isOutOfStock = p.branch_stock <= 0;
+        {/* Products Grid (High-Performance Windowed & Paginated) */}
+        <div className="flex-1 p-3 overflow-y-auto bg-slate-50/50 flex flex-col justify-between">
+          <div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5">
+              {visibleProducts.map((p) => {
+                const isLowStock = p.branch_stock <= p.min_stock;
+                const isOutOfStock = p.branch_stock <= 0;
 
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => {
-                    if (p.unit === 'Kg' || p.unit === 'Gram' || p.category_name?.toLowerCase().includes('sweet') || p.name?.toLowerCase().includes('barfi') || p.name?.toLowerCase().includes('jamun') || p.name?.toLowerCase().includes('mithai') || p.name?.toLowerCase().includes('ladoo') || p.name?.toLowerCase().includes('jalebi') || p.name?.toLowerCase().includes('katli') || p.name?.toLowerCase().includes('chhena')) {
-                      openWeightModal(p);
-                    } else {
-                      addToCart(p);
-                    }
-                  }}
-                  className={`bg-white rounded-xl p-2.5 border transition cursor-pointer select-none relative flex flex-col justify-between hover:shadow-md hover:border-amber-400 group ${
-                    isOutOfStock ? 'opacity-60 border-rose-200' : 'border-slate-200'
-                  }`}
-                >
-                  <div>
-                    {/* Stock badge */}
-                    <div className="flex items-center justify-between text-[10px] mb-1">
-                      <span className="font-mono text-slate-400 font-bold">{p.code}</span>
-                      <span className={`px-1.5 py-0.5 rounded font-bold ${
-                        isOutOfStock
-                          ? 'bg-rose-100 text-rose-700'
-                          : isLowStock
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-emerald-100 text-emerald-800'
-                      }`}>
-                        {p.branch_stock} {p.unit}
-                      </span>
-                    </div>
-
-                    {/* Product Name */}
-                    <h4 className="font-bold text-xs text-slate-900 group-hover:text-amber-700 transition line-clamp-2">
-                      {p.name}
-                    </h4>
-                    {p.name_urdu && (
-                      <p className="font-urdu text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                        {p.name_urdu}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Price & Weight Button */}
-                  <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      if (p.unit === 'Kg' || p.unit === 'Gram' || p.category_name?.toLowerCase().includes('sweet') || p.name?.toLowerCase().includes('barfi') || p.name?.toLowerCase().includes('jamun') || p.name?.toLowerCase().includes('mithai') || p.name?.toLowerCase().includes('ladoo') || p.name?.toLowerCase().includes('jalebi') || p.name?.toLowerCase().includes('katli') || p.name?.toLowerCase().includes('chhena')) {
+                        openWeightModal(p);
+                      } else {
+                        addToCart(p);
+                      }
+                    }}
+                    className={`bg-white rounded-xl p-2.5 border transition cursor-pointer select-none relative flex flex-col justify-between hover:shadow-md hover:border-amber-400 group ${
+                      isOutOfStock ? 'opacity-60 border-rose-200' : 'border-slate-200'
+                    }`}
+                  >
                     <div>
-                      <span className="text-[10px] text-slate-400 font-semibold block">{p.unit}</span>
-                      <span className="text-xs font-black text-amber-700">
-                        Rs. {Number(p.sale_price).toLocaleString()}
-                      </span>
+                      {/* Stock badge */}
+                      <div className="flex items-center justify-between text-[10px] mb-1">
+                        <span className="font-mono text-slate-400 font-bold">{p.code}</span>
+                        <span className={`px-1.5 py-0.5 rounded font-bold ${
+                          isOutOfStock
+                            ? 'bg-rose-100 text-rose-700'
+                            : isLowStock
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {p.branch_stock} {p.unit}
+                        </span>
+                      </div>
+
+                      {/* Product Name */}
+                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-amber-700 transition line-clamp-2">
+                        {p.name}
+                      </h4>
+                      {p.name_urdu && (
+                        <p className="font-urdu text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                          {p.name_urdu}
+                        </p>
+                      )}
                     </div>
 
-                    {(p.unit === 'Kg' || p.unit === 'Gram' || p.category_name?.toLowerCase().includes('sweet') || p.name?.toLowerCase().includes('barfi') || p.name?.toLowerCase().includes('jamun') || p.name?.toLowerCase().includes('mithai')) ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openWeightModal(p);
-                        }}
-                        className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-[10px] font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer"
-                        title={t('weight_calc_title')}
-                      >
-                        <Scale className="w-3 h-3 text-amber-700" />
-                        <span>{t('weight_badge')}</span>
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
+                    {/* Price & Weight Button */}
+                    <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-semibold block">{p.unit}</span>
+                        <span className="text-xs font-black text-amber-700">
+                          Rs. {Number(p.sale_price).toLocaleString()}
+                        </span>
+                      </div>
 
-            {filteredProducts.length === 0 && (
-              <div className="col-span-full py-16 text-center text-slate-400 text-sm">
-                No products found matching "{searchQuery}".
-              </div>
-            )}
+                      {(p.unit === 'Kg' || p.unit === 'Gram' || p.category_name?.toLowerCase().includes('sweet') || p.name?.toLowerCase().includes('barfi') || p.name?.toLowerCase().includes('jamun') || p.name?.toLowerCase().includes('mithai')) ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openWeightModal(p);
+                          }}
+                          className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-[10px] font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                          title={t('weight_calc_title')}
+                        >
+                          <Scale className="w-3 h-3 text-amber-700" />
+                          <span>{t('weight_badge')}</span>
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {filteredProducts.length === 0 && (
+                <div className="col-span-full py-16 text-center text-slate-400 text-sm">
+                  No products found matching "{searchQuery}".
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between text-xs font-semibold text-slate-600 bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+              <span className="text-[11px] text-slate-500 font-medium">
+                Showing {((posPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(posPage * ITEMS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length.toLocaleString()} products
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={posPage === 1}
+                  onClick={() => setPosPage(prev => Math.max(1, prev - 1))}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold disabled:opacity-40 cursor-pointer transition"
+                >
+                  ◀ Prev
+                </button>
+                <span className="px-2.5 py-0.5 bg-amber-50 border border-amber-200 font-mono text-[11px] font-bold text-amber-800 rounded-md">
+                  {posPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={posPage === totalPages}
+                  onClick={() => setPosPage(prev => Math.min(totalPages, prev + 1))}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold disabled:opacity-40 cursor-pointer transition"
+                >
+                  Next ▶
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Keyboard Shortcuts Helper Footer */}

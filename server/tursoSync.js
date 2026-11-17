@@ -137,6 +137,60 @@ export async function restoreFromCloud(client = getTursoClient()) {
   }
 }
 
+const OPERATIONAL_TABLES = [
+  'sales',
+  'sale_items',
+  'branch_inventory',
+  'stock_movements',
+  'cash_registers',
+  'customers',
+  'customer_payments',
+  'supplier_payments',
+  'expenses',
+  'khata_accounts',
+  'khata_entries',
+  'audit_logs'
+];
+
+let pendingDirtyTables = new Set();
+
+function getTablesForRoute(routePath = '') {
+  if (!routePath) return null;
+  const p = routePath.toLowerCase();
+
+  if (p.startsWith('/api/pos') || p.startsWith('/api/sales')) {
+    return ['sales', 'sale_items', 'branch_inventory', 'stock_movements', 'cash_registers', 'customers', 'audit_logs'];
+  }
+  if (p.startsWith('/api/products')) {
+    return ['products', 'branch_inventory', 'audit_logs'];
+  }
+  if (p.startsWith('/api/inventory-import')) {
+    return null; // full sync
+  }
+  if (p.startsWith('/api/inventory')) {
+    return ['branch_inventory', 'stock_movements', 'audit_logs'];
+  }
+  if (p.startsWith('/api/purchases')) {
+    return ['purchases', 'purchase_items', 'branch_inventory', 'stock_movements', 'supplier_payments', 'audit_logs'];
+  }
+  if (p.startsWith('/api/expenses')) {
+    return ['expenses', 'cash_registers', 'audit_logs'];
+  }
+  if (p.startsWith('/api/customers')) {
+    return ['customers', 'customer_payments', 'audit_logs'];
+  }
+  if (p.startsWith('/api/suppliers')) {
+    return ['suppliers', 'supplier_payments', 'audit_logs'];
+  }
+  if (p.startsWith('/api/khata')) {
+    return ['khata_accounts', 'khata_entries', 'audit_logs'];
+  }
+  if (p.startsWith('/api/cash-register')) {
+    return ['cash_registers', 'audit_logs'];
+  }
+  return null;
+}
+
 /**
  * Initialize Cloud Sync on Server Startup:
  * 1. Checks if Turso cloud has saved state.
@@ -157,10 +211,17 @@ export async function initTursoSync() {
       await flushCloudSyncNow(true);
     }
 
-    // Set recurring auto-sync interval (every 60 seconds)
+    // Set recurring auto-sync interval for active operations (every 3 minutes, only operational tables)
     setInterval(() => {
-      triggerCloudSync();
-    }, 60 * 1000);
+      triggerCloudSync(OPERATIONAL_TABLES);
+    }, 3 * 60 * 1000);
+
+    // Full catalog sync every 20 minutes (static master tables)
+    setInterval(() => {
+      flushCloudSyncNow(false).catch(err => {
+        console.error('[Turso Cloud] Periodic full sync error:', err.message);
+      });
+    }, 20 * 60 * 1000);
 
   } catch (err) {
     console.error('[Turso Cloud] Error during initialization:', err.message);
@@ -168,33 +229,49 @@ export async function initTursoSync() {
 }
 
 /**
- * Debounced push to Turso Cloud (waits 1.5s after any write so batch operations don't spam API)
+ * Debounced push to Turso Cloud (waits 2s after write, syncs only dirty/affected tables)
  */
-export function triggerCloudSync() {
+export function triggerCloudSync(routeOrTables = null) {
+  if (typeof routeOrTables === 'string') {
+    const routeTables = getTablesForRoute(routeOrTables);
+    if (routeTables) {
+      for (const t of routeTables) pendingDirtyTables.add(t);
+    } else {
+      for (const t of SYNC_TABLES) pendingDirtyTables.add(t);
+    }
+  } else if (Array.isArray(routeOrTables)) {
+    for (const t of routeOrTables) pendingDirtyTables.add(t);
+  } else {
+    for (const t of OPERATIONAL_TABLES) pendingDirtyTables.add(t);
+  }
+
   if (syncTimeout) {
     clearTimeout(syncTimeout);
   }
   syncTimeout = setTimeout(() => {
-    flushCloudSyncNow().catch(err => {
+    const tablesToSync = pendingDirtyTables.size > 0 ? Array.from(pendingDirtyTables) : null;
+    pendingDirtyTables.clear();
+    flushCloudSyncNow(false, tablesToSync).catch(err => {
       console.error('[Turso Cloud] Error syncing to cloud:', err.message);
     });
-  }, 1500);
+  }, 2000);
 }
 
 /**
- * Flush all current SQLite tables to Turso Cloud immediately
+ * Flush SQLite tables to Turso Cloud (supports targeted tables for ultra-low latency)
  */
-export async function flushCloudSyncNow(force = false) {
+export async function flushCloudSyncNow(force = false, specificTables = null) {
   const client = getTursoClient();
   if (!client || isSyncing) return;
 
   isSyncing = true;
   try {
-    // Critical Overwrite Guard:
-    // If remote cloud has significantly more products than local (e.g. cloud has 4260, local has 777),
-    // we must NEVER overwrite cloud with our smaller local dataset!
-    // Instead, this node must pull the richer catalog from cloud.
-    if (!force) {
+    const tablesToProcess = specificTables && Array.isArray(specificTables) && specificTables.length > 0
+      ? specificTables.filter(t => SYNC_TABLES.includes(t))
+      : SYNC_TABLES;
+
+    // Critical Overwrite Guard (only needed if syncing products master table)
+    if (!force && tablesToProcess.includes('products')) {
       try {
         const localProductCount = db.prepare('SELECT COUNT(*) as count FROM products').get()?.count || 0;
         const remoteProdRow = await client.execute("SELECT row_count FROM sawera_cloud_state WHERE table_name = 'products'");
@@ -213,7 +290,7 @@ export async function flushCloudSyncNow(force = false) {
 
     const batchStatements = [];
 
-    for (const table of SYNC_TABLES) {
+    for (const table of tablesToProcess) {
       try {
         const rows = db.prepare(`SELECT * FROM ${table}`).all();
         batchStatements.push({
@@ -230,7 +307,7 @@ export async function flushCloudSyncNow(force = false) {
 
     if (batchStatements.length > 0) {
       await client.batch(batchStatements);
-      console.log(`[Turso Cloud] Synced ${batchStatements.length} tables to Cloud at ${new Date().toLocaleTimeString()} (Permanent lifetime storage active)`);
+      console.log(`[Turso Cloud] Synced ${batchStatements.length} tables to Cloud (${tablesToProcess.slice(0, 4).join(', ')}${tablesToProcess.length > 4 ? '...' : ''}) at ${new Date().toLocaleTimeString()}`);
     }
   } catch (err) {
     console.error('[Turso Cloud] Sync flush error:', err.message);

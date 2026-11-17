@@ -4,19 +4,28 @@ import { authenticate, requirePermission } from '../middleware/auth.js';
 
 const router = Router();
 
-// Get all products with branch stock
+// Get all products with branch stock (supports high-speed pos_mode & pagination)
 router.get('/', authenticate, (req, res) => {
-  const { branch_id, category_id, search, low_stock, out_of_stock, status = 'active' } = req.query;
+  const { branch_id, category_id, search, low_stock, out_of_stock, status = 'active', pos_mode, limit, offset } = req.query;
+  const isPos = pos_mode === 'true';
+
+  const selectCols = isPos
+    ? `p.id, p.name, p.name_urdu, p.code, p.barcode, p.category_id, p.sale_price, p.wholesale_price,
+       p.unit, p.min_stock, p.image_url,
+       c.name as category_name, c.name_urdu as category_name_urdu,
+       COALESCE(bi.quantity, 0) as branch_stock`
+    : `p.*, c.name as category_name, c.name_urdu as category_name_urdu,
+       s.name as supplier_name,
+       COALESCE(bi.quantity, 0) as branch_stock,
+       COALESCE(ti.total_stock, 0) as total_stock`;
 
   let query = `
-    SELECT p.*, c.name as category_name, c.name_urdu as category_name_urdu,
-           s.name as supplier_name,
-           COALESCE(bi.quantity, 0) as branch_stock,
-           COALESCE((SELECT SUM(quantity) FROM branch_inventory WHERE product_id = p.id), 0) as total_stock
+    SELECT ${selectCols}
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.id
-    LEFT JOIN suppliers s ON p.supplier_id = s.id
+    ${!isPos ? `LEFT JOIN suppliers s ON p.supplier_id = s.id` : ''}
     LEFT JOIN branch_inventory bi ON (bi.product_id = p.id AND bi.branch_id = ?)
+    ${!isPos ? `LEFT JOIN (SELECT product_id, SUM(quantity) as total_stock FROM branch_inventory GROUP BY product_id) ti ON ti.product_id = p.id` : ''}
     WHERE 1=1
   `;
   const params = [branch_id ? Number(branch_id) : 1];
@@ -46,6 +55,15 @@ router.get('/', authenticate, (req, res) => {
   }
 
   query += ` ORDER BY p.name ASC`;
+
+  if (limit) {
+    query += ` LIMIT ?`;
+    params.push(Number(limit));
+    if (offset) {
+      query += ` OFFSET ?`;
+      params.push(Number(offset));
+    }
+  }
 
   const products = db.prepare(query).all(...params);
   res.json({ products });

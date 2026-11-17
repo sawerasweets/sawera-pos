@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { BarcodeLabelModal } from '../components/BarcodeLabelModal';
 import { CameraBarcodeModal } from '../components/CameraBarcodeModal';
@@ -29,6 +29,18 @@ export function ProductsPage() {
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState('all');
   const [lowStockFilter, setLowStockFilter] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedCat, lowStockFilter]);
+
+  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE) || 1;
+  const visibleProducts = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return products.slice(start, start + ITEMS_PER_PAGE);
+  }, [products, currentPage]);
 
   // Add / Edit Modal
   const [showModal, setShowModal] = useState(false);
@@ -356,7 +368,7 @@ export function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {products.map((p) => {
+              {visibleProducts.map((p) => {
                 const isLow = p.branch_stock <= p.min_stock;
                 const isOut = p.branch_stock <= 0;
 
@@ -444,6 +456,36 @@ export function ProductsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs font-semibold text-slate-600">
+            <span className="text-[11px] text-slate-500 font-medium">
+              Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, products.length)} of {products.length.toLocaleString()} products
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold disabled:opacity-40 cursor-pointer shadow-2xs transition"
+              >
+                ◀ Prev
+              </button>
+              <span className="px-3 py-1 bg-amber-50 border border-amber-200 font-mono text-[11px] font-bold text-amber-800 rounded-lg">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold disabled:opacity-40 cursor-pointer shadow-2xs transition"
+              >
+                Next ▶
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ADD / EDIT PRODUCT MODAL */}

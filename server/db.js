@@ -566,10 +566,15 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
     CREATE INDEX IF NOT EXISTS idx_products_code ON products(code);
     CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+    CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
+    CREATE INDEX IF NOT EXISTS idx_products_status_name ON products(status, name);
     CREATE INDEX IF NOT EXISTS idx_branch_inventory_product ON branch_inventory(product_id);
+    CREATE INDEX IF NOT EXISTS idx_branch_inv_prod_branch ON branch_inventory(product_id, branch_id);
+    CREATE INDEX IF NOT EXISTS idx_branch_inv_branch_prod ON branch_inventory(branch_id, product_id);
     CREATE INDEX IF NOT EXISTS idx_sales_branch ON sales(branch_id);
     CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
     CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id);
     CREATE INDEX IF NOT EXISTS idx_expenses_branch ON expenses(branch_id);
     CREATE INDEX IF NOT EXISTS idx_stock_movements_prod ON stock_movements(product_id);
     CREATE INDEX IF NOT EXISTS idx_waste_branch ON waste_logs(branch_id);

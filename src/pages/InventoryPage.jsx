@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   Layers,
@@ -26,6 +26,18 @@ export function InventoryPage() {
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all', 'low_stock', 'out_of_stock'
   const [search, setSearch] = useState('');
+  const [stockPage, setStockPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
+
+  useEffect(() => {
+    setStockPage(1);
+  }, [search, filter, activeBranchId]);
+
+  const totalPages = Math.ceil(inventory.length / ITEMS_PER_PAGE) || 1;
+  const visibleInventory = useMemo(() => {
+    const start = (stockPage - 1) * ITEMS_PER_PAGE;
+    return inventory.slice(start, start + ITEMS_PER_PAGE);
+  }, [inventory, stockPage]);
 
   // Modals
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -295,7 +307,7 @@ export function InventoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {inventory.map((item, idx) => {
+                {visibleInventory.map((item, idx) => {
                   const isOut = item.quantity <= 0;
                   const isLow = item.quantity <= item.min_stock;
 
@@ -338,6 +350,36 @@ export function InventoryPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs font-semibold text-slate-600">
+              <span className="text-[11px] text-slate-500 font-medium">
+                Showing {((stockPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(stockPage * ITEMS_PER_PAGE, inventory.length)} of {inventory.length.toLocaleString()} items
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={stockPage === 1}
+                  onClick={() => setStockPage(prev => Math.max(1, prev - 1))}
+                  className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold disabled:opacity-40 cursor-pointer shadow-2xs transition"
+                >
+                  ◀ Prev
+                </button>
+                <span className="px-3 py-1 bg-amber-50 border border-amber-200 font-mono text-[11px] font-bold text-amber-800 rounded-lg">
+                  Page {stockPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={stockPage === totalPages}
+                  onClick={() => setStockPage(prev => Math.min(totalPages, prev + 1))}
+                  className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold disabled:opacity-40 cursor-pointer shadow-2xs transition"
+                >
+                  Next ▶
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
